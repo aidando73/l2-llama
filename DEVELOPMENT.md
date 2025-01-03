@@ -2,5 +2,6 @@
 ### Running the tests
 
 ```bash
-pytest tests/ -v
+pytest tests/
 ```
+
