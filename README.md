@@ -2,7 +2,7 @@
 
 This is a coding agent that can read a GitHub issue, write code and submits a PR with a fix. It's built on Llama Stack and uses the Llama 3.3 70B model. It currently performs 5% on [SWE-Bench lite](https://www.swebench.com/). Demo:
 
-https://github.com/user-attachments/assets/3f214430-aeb8-412e-ad5e-0c173e0cfbc7
+https://github.com/user-attachments/assets/0e1f8db9-d2a2-4de9-bc02-69ef229ae7a8
 
 ## What You Need
 - A GitHub account
