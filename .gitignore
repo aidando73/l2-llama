@@ -3,3 +3,4 @@ env/
 sandbox/
 __pycache__/
 .pytest_cache/
+evals/
