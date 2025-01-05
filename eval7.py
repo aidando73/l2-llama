@@ -1,6 +1,8 @@
 from datasets import load_dataset
 import os
 import sys
+from llama_agent.agent import run_agent
+
 swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,10 +35,6 @@ for index, row in df_django.iterrows():
     os.system(f"python -m llama_agent.agent {eval_dir}")
     os.system(f"python validate7.py {eval_dir}")
 
-# instance_id = df_django.iloc[0]['instance_id']
-# os.system(f"python setup7.py {instance_id}")
-# os.system(f"python app15.py {eval_dir}")
-# os.system(f"python validate7.py {eval_dir}")
 
 # Copy the llama-stack.log file - from the line count of the log file to the end of the file
 with open(log_path) as f:
