@@ -60,9 +60,9 @@ stdbuf -o0 tee -a logs/$log_file
 # Django 4.1 and 4.2 use python 3.9
 # Django 5.0 uses python 3.11
 # https://github.com/swe-bench/SWE-bench/blob/5f5a7df799663adba4b191eca3d675faf3621fe2/swebench/harness/constants.py#L197-L218
-(cd django && source ~/miniconda3/bin/activate && conda create --prefix ./env_3_8 python=3.8)
-(cd django && source ~/miniconda3/bin/activate && conda create --prefix ./env_3_9 python=3.9)
-(cd django && source ~/miniconda3/bin/activate && conda create --prefix ./env_3_11 python=3.11)
+(cd sandbox/django && source ~/miniconda3/bin/activate && conda create --prefix ./env_3_8 python=3.8)
+(cd sandbox/django && source ~/miniconda3/bin/activate && conda create --prefix ./env_3_9 python=3.9)
+(cd sandbox/django && source ~/miniconda3/bin/activate && conda create --prefix ./env_3_11 python=3.11)
 
 
 
