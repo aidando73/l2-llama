@@ -112,7 +112,7 @@ eval_dir=$(realpath swe-evals)/v17.5 \
     | tee -a $eval_dir/harness.log
 
 
-eval_dir=$(realpath evals/v18) && \                                                                    
+eval_dir=$(realpath evals/v18) && \
 python eval7.py $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
 ```
