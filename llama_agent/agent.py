@@ -213,59 +213,7 @@ def run_agent(
     else:
         print(yellow("Max iterations reached"))
 
-    # Create a PR title
-    message += chat_message(
-        "user",
-        "Please create a PR title that summarizes the changes you've made. Do not include any leading or trailing punctuation.",
-    )
-    message += header("assistant")
-    response = client.inference.completion(
-        model_id=MODEL_ID,
-        content=message,
-    )
-    pr_title = response.content
-
-    # Check if there are any changes
-    # If there are no changes, ask the agent to explain why
-    diff_cmd = run(f"cd {os.path.join(SANDBOX_DIR, repo)} && git diff", shell=True, capture_output=True)
-    if not diff_cmd.stdout:
-        print(f"No changes were made - agent explaining why...")
-        message += chat_message(
-            "user",
-            (
-                "No changes were made."
-                "Could you explain your reasoning for not making any changes?"
-                "Please write it in GitHub Flavored Markdown."
-                "Also provide some next steps to fix the issue."
-            ),
-        )
-        message += header("assistant")
-        response = client.inference.completion(
-            model_id=MODEL_ID,
-            content=message,
-        )
-        reasoning = response.content
-        return ("no_changes_made", reasoning, None)
-
-    # Create a PR body
-    message += chat_message(
-        "user",
-        (
-            "Summarizing all of the changes and thinking you've done,"
-            "please write a PR body that explains the changes you've made."
-            "Please write it in GitHub Flavored Markdown."
-        ),
-    )
-    message += header("assistant")
-    # Llama sometimes includes an unnecessary "## PR body" title so we add it here to make sure it's not included
-    message += "## PR Body\n\n"
-    response = client.inference.completion(
-        model_id=MODEL_ID,
-        content=message,
-    )
-    pr_body = response.content
-
-    return "changes_made", pr_title, pr_body
+    
 
 
 def execute_tool_call(
