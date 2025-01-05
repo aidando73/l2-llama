@@ -3,6 +3,7 @@ import os
 import sys
 from llama_agent.agent import run_agent
 from llama_stack_client import LlamaStackClient
+
 swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +33,6 @@ with open(log_path) as f:
 llama_stack_url = os.getenv("LLAMA_STACK_URL")
 if not llama_stack_url:
     raise ValueError("LLAMA_STACK_URL is not set in the environment variables")
-
 client = LlamaStackClient(base_url=llama_stack_url)
 
 for index, row in df_django.iterrows():
