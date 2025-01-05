@@ -9,6 +9,9 @@ load_dotenv()
 
 swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
+# Force Python to flush prints immediately
+sys.stdout.reconfigure(line_buffering=True)  # Python 3.7+
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 df = swebench.to_pandas()
 
