@@ -220,6 +220,11 @@ def run_agent(
         ) as f:
             f.write(message)
 
+TOOLS = {
+    
+}
+
+
 
 def execute_tool_call(
     tool_name: str, tool_params: dict[str, str]
