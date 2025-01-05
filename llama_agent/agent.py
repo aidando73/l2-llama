@@ -26,7 +26,7 @@ formatter = ChatFormat(Tokenizer.get_instance())
 
 
 def run_agent(
-    client: LlamaStackClient, repo: str, issue_title: str, issue_body: str
+    client: LlamaStackClient, repo: str, problem_statement: str, eval_dir: Optional[str] = None, instance_id: Optional[str] = None
 ) -> Tuple[Literal["changes_made", "no_changes_made"], str, Optional[str]]:
     """
     Returns:
@@ -129,8 +129,7 @@ def run_agent(
     </file_tree>
 
     <problem_statement>
-    Issue title: {issue_title}
-    Issue body: {issue_body}
+    {problem_statement}
     </problem_statement>
 
     You are in the working directory as specified in <working_directory>. Please specify paths in absolute paths only.
@@ -213,8 +212,11 @@ def run_agent(
     else:
         print(yellow("Max iterations reached"))
 
-    
-
+    if eval_dir:
+        with open(
+            os.path.join(eval_dir, "trajs", f"{instance_id}-prompt.txt"), "w"
+        ) as f:
+            f.write(message)
 
 def execute_tool_call(
     tool_name: str, tool_params: dict[str, str]
