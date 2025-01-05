@@ -75,7 +75,7 @@ print('\033[92mPatch reverted\033[0m')
 
 if eval_dir:
     # Collect any remaining changes into a patch file
-    patch_file = os.path.join(SCRIPT_DIR, "evals", eval_dir, "logs", f"{sample_row['instance_id']}.patch")
+    patch_file = os.path.join(SCRIPT_DIR, "evals", eval_dir, "trajs", f"{sample_row['instance_id']}.patch")
 else:
     patch_file = os.path.join(SCRIPT_DIR, f"current_instance.patch")
 

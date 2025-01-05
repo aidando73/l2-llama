@@ -110,6 +110,12 @@ screen -S agent-eval
 eval_dir=$(realpath swe-evals)/v17.5 \
     && python eval8.py $eval_dir \
     | tee -a $eval_dir/harness.log
+
+
+eval_dir=$(realpath evals/v18) && \
+mkdir -p $eval_dir/trajs && \
+python eval7.py $eval_dir  2>&1 | \
+stdbuf -o0 tee -a $eval_dir/harness.log
 ```
 
 Dependencies:
