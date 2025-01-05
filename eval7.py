@@ -26,7 +26,7 @@ with open('current_instance.txt', 'w') as f:
     f.write(f"0,{df_django.iloc[0]['instance_id']}")
 
 # Create eval directory and logs subdirectory if they don't exist
-os.makedirs(os.path.join(eval_dir, "logs"), exist_ok=True)
+os.makedirs(os.path.join(eval_dir, "trajs"), exist_ok=True)
 
 # Get line count of llama-stack.log
 log_path = os.path.expanduser("~/dev/llama-stack/llama-stack.log")
