@@ -39,7 +39,9 @@ for index, row in df_django.iterrows():
     instance_id = row['instance_id']
     os.system(f"python setup7.py {instance_id}")
 
-    run_agent(eval_dir, instance_id)
+    problem_statement = row['problem_statement']
+    run_agent(client, problem_statement, eval_dir, instance_id)
+
     os.system(f"python validate7.py {eval_dir}")
 
 
