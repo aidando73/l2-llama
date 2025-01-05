@@ -4,3 +4,5 @@ sandbox/
 __pycache__/
 .pytest_cache/
 evals/
+current_instance.txt
+sample_row.json

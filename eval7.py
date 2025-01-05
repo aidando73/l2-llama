@@ -3,6 +3,9 @@ import os
 import sys
 from llama_agent.agent import run_agent
 from llama_stack_client import LlamaStackClient
+from dotenv import load_dotenv
+
+load_dotenv()
 
 swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
@@ -40,7 +43,7 @@ for index, row in df_django.iterrows():
     os.system(f"python setup7.py {instance_id}")
 
     problem_statement = row['problem_statement']
-    run_agent(client, problem_statement, eval_dir, instance_id)
+    run_agent(client, "django", problem_statement, eval_dir, instance_id)
 
     os.system(f"python validate7.py {eval_dir}")
 
