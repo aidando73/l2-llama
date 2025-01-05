@@ -5,17 +5,18 @@ import datetime
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DJANGO_DIR = os.path.join(SCRIPT_DIR, "sandbox", "django")
 
 with open(os.path.join(SCRIPT_DIR, 'sample_row.json'), 'r') as f:
     sample_row = json.load(f)
 
-with open(os.path.join(SCRIPT_DIR, 'django/test.patch'), 'w') as f:
+with open(os.path.join(DJANGO_DIR, 'test.patch'), 'w') as f:
     f.write(sample_row["test_patch"])
 
 eval_dir = sys.argv[1] if len(sys.argv) > 1 else None
 
 print("Applying patch...")
-os.system(f"cd {SCRIPT_DIR}/django && git apply test.patch")
+os.system(f"cd {DJANGO_DIR} && git apply test.patch")
 print('\033[92mPatch applied\033[0m')
 
 if sample_row["version"] == "4.0":
@@ -43,14 +44,14 @@ directives = directives_transformed
 print('\033[94m' + f"Running command: ./tests/runtests.py --settings=test_sqlite --parallel 1 {' '.join(directives)}" + '\033[0m')
 
 os.system(
-    f"bash -c 'cd {SCRIPT_DIR}/django && "
+    f"bash -c 'cd {DJANGO_DIR} && "
     f"source ~/miniconda3/bin/activate && "
     f"conda activate ./{environment} && "
     f"python -m pip install -e .'"
 )
 
 test_result =os.system(
-    f"bash -c 'cd {SCRIPT_DIR}/django && "
+    f"bash -c 'cd {DJANGO_DIR} && "
     f"source ~/miniconda3/bin/activate && "
     f"conda activate ./{environment} && "
     f"./tests/runtests.py --settings=test_sqlite --parallel 1 {' '.join(directives)}'"
@@ -69,7 +70,7 @@ if eval_dir:
         f.write(f"{sample_row['instance_id']},{result},{timestamp}\n")
 
 print("Reverting patch...")
-os.system(f"cd {SCRIPT_DIR}/django && git apply -R test.patch")
+os.system(f"cd {DJANGO_DIR} && git apply -R test.patch")
 print('\033[92mPatch reverted\033[0m')
 
 
@@ -79,4 +80,4 @@ if eval_dir:
 else:
     patch_file = os.path.join(SCRIPT_DIR, f"current_instance.patch")
 
-os.system(f"cd {SCRIPT_DIR}/django && git diff > {patch_file}")
+os.system(f"cd {DJANGO_DIR} && git diff > {patch_file}")
