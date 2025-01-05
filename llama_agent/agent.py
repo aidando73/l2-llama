@@ -24,9 +24,12 @@ AGENT_WORKING_DIR = "/workspace/"
 
 formatter = ChatFormat(Tokenizer.get_instance())
 
-
 def run_agent(
-    client: LlamaStackClient, repo: str, problem_statement: str, eval_dir: Optional[str] = None, instance_id: Optional[str] = None
+    client: LlamaStackClient,
+    repo: str,
+    problem_statement: str,
+    eval_dir: Optional[str] = None,
+    instance_id: Optional[str] = None,
 ) -> Tuple[Literal["changes_made", "no_changes_made"], str, Optional[str]]:
     """
     Returns:
@@ -181,9 +184,8 @@ def run_agent(
                 continue
 
             tool_name, tool_params = tool_call
-            msg = (
-                f"Executing tool call: "
-                + blue(f"[{tool_name}{display_tool_params(tool_params)}]")
+            msg = f"Executing tool call: " + blue(
+                f"[{tool_name}{display_tool_params(tool_params)}]"
             )
             message += header("tool")
             message += msg + "\n"
@@ -218,6 +220,7 @@ def run_agent(
         ) as f:
             f.write(message)
 
+
 def execute_tool_call(
     tool_name: str, tool_params: dict[str, str]
 ) -> Union[Tuple[Literal["success"], str], Tuple[Literal["error"], str]]:
@@ -234,10 +237,12 @@ def execute_tool_call(
             ("error", error_message): The error message if the tool call failed.
     """
     if tool_name == "list_files":
-        if (error := validate_param_exists("path", tool_params)
+        if (
+            error := validate_param_exists("path", tool_params)
             or validate_not_symlink(tool_params["path"])
             or validate_path_in_sandbox(tool_params["path"])
-            or validate_directory_exists(tool_params["path"])):
+            or validate_directory_exists(tool_params["path"])
+        ):
             return ("error", error)
 
         path = translate_path(tool_params["path"])
@@ -269,13 +274,14 @@ def execute_tool_call(
                 f.write(tool_params["new_str"])
         return ("success", "File successfully updated")
 
-
     elif tool_name == "view_file":
-        if (error := validate_param_exists("path", tool_params)
+        if (
+            error := validate_param_exists("path", tool_params)
             or validate_not_symlink(tool_params["path"])
             or validate_path_in_sandbox(tool_params["path"])
             or validate_file_exists(tool_params["path"])
-            or validate_not_a_directory(tool_params["path"])):
+            or validate_not_a_directory(tool_params["path"])
+        ):
             return ("error", error)
 
         path = translate_path(tool_params["path"])
@@ -374,10 +380,11 @@ def validate_param_exists(
         return f"ERROR - {param_name} not found in tool params: {display_tool_params(tool_params)}"
     return None
 
+
 def validate_path_in_sandbox(path: str) -> Optional[str]:
     """
     Validate that a path stays within the sandbox directory.
-    
+
     Args:
         path (str): The path to validate
 
@@ -394,25 +401,30 @@ def validate_path_in_sandbox(path: str) -> Optional[str]:
         return f"ERROR - File {path} does not exist"
     return None
 
+
 def validate_not_symlink(path: str) -> Optional[str]:
     if os.path.islink(translate_path(path)):
         return f"ERROR - File {path} is a symlink. Simlinks not allowed"
     return None
+
 
 def validate_file_exists(path: str) -> Optional[str]:
     if not os.path.exists(translate_path(path)):
         return f"ERROR - File {path} does not exist. Please ensure the path is an absolute path and that the file exists."
     return None
 
+
 def validate_not_a_directory(path: str) -> Optional[str]:
     if os.path.isdir(translate_path(path)):
         return f"ERROR - File {path} is a directory. Please ensure the path references a file, not a directory."
     return None
 
+
 def validate_directory_exists(path: str) -> Optional[str]:
     if not os.path.exists(translate_path(path)):
         return f"ERROR - Directory {path} does not exist. Please ensure the path is an absolute path and that the directory exists."
     return None
+
 
 def chat_message(role: Literal["user", "assistant", "system", "tool"], content: str):
     return f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
