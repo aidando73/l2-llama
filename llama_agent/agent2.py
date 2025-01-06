@@ -330,7 +330,7 @@ def parse_tool_calls(
         try:
             tool_calls.append((tool_name, json.loads(query.replace("'", '"'))))
         except Exception as e:
-            return ("error", f"Exception while parsing json query for custom tool call: {query} {e}")
+            return ("error", f"Tool call invalid syntax: {query} {e}")
     return tool_calls
 
 CUSTOM_TOOL_CALL_PATTERN = re.compile(
