@@ -22,7 +22,8 @@ from llama_agent.utils.ansi import red, yellow, magenta, blue
 from subprocess import run
 
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
-MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
+# MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
+MODEL_ID = "meta-llama/Llama-3.1-405B-Instruct-FP8"
 ITERATIONS = 15
 
 SANDBOX_DIR = os.path.join(REPO_DIR, "sandbox")
