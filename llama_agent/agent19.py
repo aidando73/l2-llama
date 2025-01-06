@@ -35,7 +35,8 @@ SANDBOX_DIR = os.path.join(REPO_DIR, "sandbox")
 # We give the agent a virtual working directory so it doesn't have to worry about long absolute paths
 AGENT_WORKING_DIR = "/workspace/"
 
-formatter = ChatFormat(Tokenizer.get_instance())
+tokenizer = Tokenizer.get_instance()
+formatter = ChatFormat(tokenizer)
 
 
 def run_agent(
@@ -91,6 +92,7 @@ def run_agent(
             break
 
         message += header("assistant")
+        token_count = len(tokenizer.encode(message, bos=False, eos=False))
         response = client.inference.completion(
             model_id=MODEL_ID,
             content=message,
@@ -149,6 +151,7 @@ def run_agent(
 
             if result == "success" and tool_name == "finish":
                 finished = True
+        print(f"Input tokens: {token_count}")
 
     if finished:
         print(blue("Agent marked as finished"))
