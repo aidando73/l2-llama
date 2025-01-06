@@ -128,12 +128,11 @@ def run_agent(
                 continue
 
             tool_name, tool_params = tool_call
-            msg = f"Executing tool call: " + blue(
-                f"[{tool_name}{display_tool_params(tool_params)}]"
-            )
+            msg = f"[{tool_name}{display_tool_params(tool_params)}]"
             message += header("tool")
+            message += "Executing tool call: " + msg + "\n"
             message += msg + "\n"
-            print(msg)
+            print("Executing tool call: " + blue(msg))
 
             try:
                 result, result_msg = execute_tool_call(tool_name, tool_params)
