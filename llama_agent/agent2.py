@@ -1,6 +1,7 @@
 import os
 from typing import Literal, Optional, Tuple, Union
 import re
+import json
 from llama_stack_client import LlamaStackClient
 from llama_models.llama3.api.chat_format import ChatFormat
 from llama_models.llama3.api.tokenizer import Tokenizer
@@ -322,43 +323,19 @@ def parse_tool_calls(
                 - error_message (str): The error message
     """
     tool_calls = []
-    for match in re.finditer(r"<tool>(.*?)</tool>", content, re.DOTALL):
-        tool_content = match.group(1)
-        if not is_valid_python_list(tool_content):
-            tool_content = tool_content.strip()
-
-            # Add square brackets if missing
-            if not tool_content.startswith("["):
-                tool_content = f"[{tool_content}"
-            if not tool_content.endswith("]"):
-                tool_content = f"{tool_content}]"
-
+    match = re.search(CUSTOM_TOOL_CALL_PATTERN, content)
+    if match:
+        tool_name = match.group("function_name")
+        query = match.group("args")
         try:
-            result = parse_python_list_for_function_calls(tool_content)
-            if is_valid_python_list(tool_content):
-                # Add the original tool content to each result tuple
-                result = [(name, params) for name, params in result]
-                tool_calls.extend(result)
-            else:
-                tool_calls.append(
-                    (
-                        "error",
-                        "Tool call invalid syntax: " + match.group(0),
-                    )
-                )
+            tool_calls.append((tool_name, json.loads(query.replace("'", '"'))))
         except Exception as e:
-            tool_calls.append(
-                (
-                    "error",
-                    "Tool call invalid syntax: Could not parse tool call: "
-                    + match.group(0)
-                    + " "
-                    + str(e),
-                )
-            )
-
+            return ("error", f"Exception while parsing json query for custom tool call: {query} {e}")
     return tool_calls
 
+CUSTOM_TOOL_CALL_PATTERN = re.compile(
+    r"<function=(?P<function_name>[^}]+)>(?P<args>{.*?})"
+)
 
 def display_tool_params(tool_params: dict[str, str]):
     return (
