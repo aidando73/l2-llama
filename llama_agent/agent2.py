@@ -113,7 +113,7 @@ def run_agent(
         else:
             # Check for any text outside of tool tags
             non_tool_content = re.sub(
-                r"<tool>.*?</tool>", "", response.content, flags=re.DOTALL
+                CUSTOM_TOOL_CALL_PATTERN, "", response.content, flags=re.DOTALL
             ).strip()
             if non_tool_content:
                 print(f"Thinking: {magenta(non_tool_content)}")
@@ -333,9 +333,7 @@ def parse_tool_calls(
             return ("error", f"Tool call invalid syntax: {query} {e}")
     return tool_calls
 
-CUSTOM_TOOL_CALL_PATTERN = re.compile(
-    r"<function=(?P<function_name>[^}]+)>(?P<args>{.*?})"
-)
+CUSTOM_TOOL_CALL_PATTERN = r"<function=(?P<function_name>[^}]+)>(?P<args>{.*?})"
 
 def display_tool_params(tool_params: dict[str, str]):
     return (
