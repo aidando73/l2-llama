@@ -118,6 +118,7 @@ sudo apt install screen
 screen -S agent-eval
 
 eval_dir=$(realpath evals/v18) && \
+mkdir -p $eval_dir && \
 python eval7.py $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
 ```
