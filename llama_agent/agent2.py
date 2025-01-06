@@ -174,7 +174,7 @@ TOOLS = [
     ToolDefinition(
         tool_name="edit_file",
         description="Edit a file. Specify the path to the file and the new_str to write to it. If old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
-        params=[
+        parameters=[
             ToolParamDefinition(
                 name="path",
                 param_type="string",
@@ -198,7 +198,7 @@ TOOLS = [
     ToolDefinition(
         tool_name="view_file",
         description="View a file",
-        params=[
+        parameters=[
             ToolParamDefinition(
                 name="path",
                 param_type="string",
@@ -210,7 +210,7 @@ TOOLS = [
     ToolDefinition(
         tool_name="finish",
         description="If you have solved the problem, you can call this function to finish the task.",
-        params=[],
+        parameters=[],
     ),
 ]
 
