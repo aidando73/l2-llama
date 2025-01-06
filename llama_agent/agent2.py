@@ -64,8 +64,6 @@ def run_agent(
     )
     message += FunctionTagCustomToolGenerator().gen(TOOLS).render()
     message += "<|eot_id|>"
-    print(message)
-    return
 
     # User prompt
     message += header("user")
