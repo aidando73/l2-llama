@@ -114,9 +114,13 @@ eval_dir=$(realpath swe-evals)/v17.5 \
 
 
 
+# New screen
 sudo apt install screen
 screen -S agent-eval
 source ~/miniconda3/bin/activate ./env
+
+# If reattaching
+screen -r agent-eval
 
 eval_dir=$(realpath evals/v20) && \
 mkdir -p $eval_dir && \
