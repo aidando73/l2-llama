@@ -162,55 +162,50 @@ TOOLS = [
     ToolDefinition(
         tool_name="list_files",
         description="List all files in a directory.",
-        params=[
-            ToolParamDefinition(
-                name="path",
+        parameters={
+            "path": ToolParamDefinition(
                 param_type="string",
                 description="Absolute path to a directory, e.g. `/workspace/django`. If referencing a file, will return the name of the file.",
                 required=True,
             )
-        ],
+        },
     ),
     ToolDefinition(
         tool_name="edit_file",
         description="Edit a file. Specify the path to the file and the new_str to write to it. If old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
-        parameters=[
-            ToolParamDefinition(
-                name="path",
+        parameters={
+            "path": ToolParamDefinition(
                 param_type="string",
                 description="Absolute path to file or directory, e.g. `/workspace/django/file.py` or `/workspace/django`.",
                 required=True,
             ),
-            ToolParamDefinition(
-                name="new_str",
+            "new_str": ToolParamDefinition(
                 param_type="string",
                 description="The new string to write to the file. If the old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
                 required=True,
             ),
-            ToolParamDefinition(
-                name="old_str",
+            "old_str": ToolParamDefinition(
                 param_type="string",
                 description="The string in the file at `path` to replace. If not specified, the entire file will be replaced by new_str",
                 required=False,
             ),
-        ],
+        },
     ),
     ToolDefinition(
         tool_name="view_file",
         description="View a file",
-        parameters=[
-            ToolParamDefinition(
-                name="path",
+        parameters={
+            "path": ToolParamDefinition(
                 param_type="string",
                 description="The absolute path to the file to view, e.g. `/workspace/django/file.py` or `/workspace/django`.",
                 required=True,
             )
-        ],
+        },
     ),
     ToolDefinition(
         tool_name="finish",
         description="If you have solved the problem, you can call this function to finish the task.",
-        parameters=[],
+        parameters={},
     ),
 ]
 
