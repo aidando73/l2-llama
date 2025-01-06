@@ -118,7 +118,7 @@ sudo apt install screen
 screen -S agent-eval
 source ~/miniconda3/bin/activate ./env
 
-eval_dir=$(realpath evals/v19.1) && \
+eval_dir=$(realpath evals/v19.2) && \
 mkdir -p $eval_dir && \
 python eval7.py $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
