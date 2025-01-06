@@ -49,7 +49,7 @@ def run_agent(
     # System prompt
     message = "<|begin_of_text|>"
     message += header("system")
-    message += FunctionTagCustomToolGenerator(TOOLS).generate_system_prompt()
+    message += FunctionTagCustomToolGenerator().gen(TOOLS).render()
     message += "<|eot_id|>"
     print(message)
     return
