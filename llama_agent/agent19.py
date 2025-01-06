@@ -190,6 +190,8 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
 
             <function=example_function_name>{"example_name": "example_value"}</function>
 
+            Please explain your reasoning before you perform any tool calls in a <thinking> tag.
+
             Reminder:
             - Function calls MUST follow the specified format, start with <function= and end with </function>
             - Required parameters MUST be specified
