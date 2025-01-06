@@ -6,3 +6,5 @@ __pycache__/
 evals/
 current_instance.txt
 sample_row.json
+current_instance.patch
+logs/
