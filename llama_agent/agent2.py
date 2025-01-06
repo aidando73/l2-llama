@@ -20,6 +20,7 @@ from llama_agent.utils.file_tree import list_files_in_repo
 from llama_agent import REPO_DIR
 from llama_agent.utils.ansi import red, yellow, magenta, blue
 from subprocess import run
+from textwrap import dedent
 
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
 # MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
@@ -50,6 +51,17 @@ def run_agent(
     # System prompt
     message = "<|begin_of_text|>"
     message += header("system")
+    message += dedent(
+    """
+    You are an expert software engineer.
+    You will be given a problem statement in <problem_statement>
+
+    Based on the <problem_statement>, you will need to make one or more function/tool calls to achieve the purpose.
+    If none of the function can be used, point it out. If the given question lacks the parameters required by the function,
+    also point it out. You should only return the function call in tools call sections.
+
+    """.strip()
+    )
     message += FunctionTagCustomToolGenerator().gen(TOOLS).render()
     message += "<|eot_id|>"
     print(message)
