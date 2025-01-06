@@ -1,5 +1,6 @@
 import os
 from typing import Literal, Optional, Tuple, Union
+import re
 from llama_stack_client import LlamaStackClient
 from llama_models.llama3.api.chat_format import ChatFormat
 from llama_models.llama3.api.tokenizer import Tokenizer
@@ -12,7 +13,9 @@ from llama_models.llama3.api.datatypes import (
     ToolDefinition,
     ToolParamDefinition,
 )
-import re
+from llama_models.llama3.prompt_templates.system_prompts import (
+    FunctionCallPromptTemplate,
+)
 from llama_agent.utils.file_tree import list_files_in_repo
 from llama_agent import REPO_DIR
 from llama_agent.utils.ansi import red, yellow, magenta, blue
