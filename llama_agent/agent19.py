@@ -105,7 +105,7 @@ def run_agent(
         else:
             # Check for any text outside of tool tags
             non_tool_content = re.sub(
-                CUSTOM_TOOL_CALL_PATTERN, "", response.content, flags=re.DOTALL
+                r"<function=.*?>.*?</function>", "", response.content, flags=re.DOTALL
             ).strip()
             if non_tool_content:
                 print(f"Thinking: {magenta(non_tool_content)}")
@@ -186,15 +186,13 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             {"name": "{{tname}}", "description": "{{tdesc}}", "parameters": {{tparams}}}
 
             {% endfor -%}
-            If you choose to call a function ONLY reply in the following format with no prefix or suffix:
+            If you choose to call a function ONLY reply in the following format:
 
             <function=example_function_name>{"example_name": "example_value"}</function>
 
             Reminder:
-            - If looking for real time information use relevant functions before falling back to brave_search
             - Function calls MUST follow the specified format, start with <function= and end with </function>
             - Required parameters MUST be specified
-            - Only call one function at a time
             - Put the entire function call reply on one line
             """
         )
@@ -357,8 +355,7 @@ def parse_tool_calls(
                 - error_message (str): The error message
     """
     tool_calls = []
-    match = re.search(CUSTOM_TOOL_CALL_PATTERN, content)
-    if match:
+    for match in re.finditer(CUSTOM_TOOL_CALL_PATTERN, content):
         tool_name = match.group("function_name")
         query = match.group("args")
         try:
