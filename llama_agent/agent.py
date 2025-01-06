@@ -8,6 +8,10 @@ from llama_models.llama3.api.tool_utils import (
     is_valid_python_list,
     parse_python_list_for_function_calls,
 )
+from llama_models.llama3.api.datatypes import (
+    ToolDefinition,
+    ToolParamDefinition,
+)
 import re
 from llama_agent.utils.file_tree import list_files_in_repo
 from llama_agent import REPO_DIR
@@ -23,6 +27,7 @@ SANDBOX_DIR = os.path.join(REPO_DIR, "sandbox")
 AGENT_WORKING_DIR = "/workspace/"
 
 formatter = ChatFormat(Tokenizer.get_instance())
+
 
 def run_agent(
     client: LlamaStackClient,
@@ -220,10 +225,62 @@ def run_agent(
         ) as f:
             f.write(message)
 
-TOOLS = {
-    
-}
 
+TOOLS = [
+    ToolDefinition(
+        name="list_files",
+        description="List all files in a directory.",
+        params=[
+            ToolParamDefinition(
+                name="path",
+                type="string",
+                description="Absolute path to a directory, e.g. `/workspace/django`. If referencing a file, will return the name of the file.",
+                required=True,
+            )
+        ],
+    ),
+    ToolDefinition(
+        name="edit_file",
+        description="Edit a file. Specify the path to the file and the new_str to write to it. If old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
+        params=[
+            ToolParamDefinition(
+                name="path",
+                type="string",
+                description="Absolute path to file or directory, e.g. `/workspace/django/file.py` or `/workspace/django`.",
+                required=True,
+            ),
+            ToolParamDefinition(
+                name="new_str",
+                type="string",
+                description="The new string to write to the file. If the old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
+                required=True,
+            ),
+            ToolParamDefinition(
+                name="old_str",
+                type="string",
+                description="The string in the file at `path` to replace. If not specified, the entire file will be replaced by new_str",
+                required=False,
+            ),
+        ],
+    ),
+    ToolDefinition(
+        name="view_file",
+        description="View a file",
+        params=[
+            ToolParamDefinition(
+                name="path",
+                type="string",
+                description="The absolute path to the file to view, e.g. `/workspace/django/file.py` or `/workspace/django`.",
+                required=True,
+            )
+        ],
+    ),
+    ToolDefinition(
+        name="finish",
+        description="If you have solved the problem, you can call this function to finish the task.",
+        params=[],
+    ),
+]
 
 
 def execute_tool_call(
