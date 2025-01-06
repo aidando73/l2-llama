@@ -46,7 +46,10 @@ for index, row in df_django.iterrows():
     os.system(f"python setup7.py {instance_id}")
 
     problem_statement = row['problem_statement']
-    run_agent(client, "django", problem_statement, eval_dir, instance_id)
+    try:
+        run_agent(client, "django", problem_statement, eval_dir, instance_id)
+    except Exception as e:
+        print(f"Agent exited with error: {e}")
 
     os.system(f"python validate7.py {eval_dir}")
 
