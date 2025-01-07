@@ -48,6 +48,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             You will be given a problem statement in <problem_statement>
 
             Based on the <problem_statement>, you will need to make one or more function/tool calls to achieve the purpose.
+            If you decide to invoke any of the function(s), you MUST put it in the format of <tool>{"type": "function", "function": {"name": "func_name", "description": "func_desc", "parameters": {"type": "object", "properties": {"param_name1": {"type": "string", "description": "param_desc1"}, "param_name2": {"type": "string", "description": "param_desc2"}}}}}</tool>
             Here is a list of functions in JSON format:
             {% for t in custom_tools -%}
             {# manually setting up JSON because jinja sorts keys in unexpected ways -#}
@@ -377,14 +378,46 @@ def parse_tool_calls(
                 - error_message (str): The error message
     """
     tool_calls = []
-    for match in re.finditer(CUSTOM_TOOL_CALL_PATTERN, content):
-        tool_name = match.group("function_name")
-        query = match.group("args")
+    for match in re.finditer(r"<tool>(.*?)</tool>", content, re.DOTALL):
+        raw_function = match.group(1)
         try:
-            tool_calls.append((tool_name, json.loads(query.replace("'", '"'))))
+            function = json.loads(raw_function)
+            if "type" not in function or function["type"] != "function":
+                return ("error", "Tool call invalid syntax: " + raw_function + 'expected <tool>{"type": "function", ...}</tool>')
+            if "name" not in function:
+                return ("error", "Tool call invalid syntax: " + raw_function + 'expected <tool>{"type": "function", "name": "func_name", ...}</tool>')
+            function_name = function["name"]
+            args = function["parameters"]
+            tool_calls.append((function_name, args))
         except Exception as e:
-            tool_calls.append(("error", f"Tool call invalid syntax: {query} {e}"))
+            tool_calls.append(("error", f"Tool call invalid syntax: {raw_function} {e}"))
+    
+    if len(tool_calls) == 0 and is_json(content):
+        # Sometimes the tool call is a list of functions
+        function = json.loads(content)
+        if isinstance(function, list):
+            for func in function:
+                if "type" not in function or function["type"] != "function":
+                    return ("error", "Tool call invalid syntax: " + raw_function + 'expected <tool>{"type": "function", ...}</tool>')
+                if "name" not in function:
+                    return ("error", "Tool call invalid syntax: " + raw_function + 'expected <tool>{"type": "function", "name": "func_name", ...}</tool>')
+                tool_calls.append((func["name"], func["parameters"]))
+        else:
+            if "type" not in function or function["type"] != "function":
+                    return ("error", "Tool call invalid syntax: " + raw_function + 'expected <tool>{"type": "function", ...}</tool>')
+            if "name" not in function:
+                return ("error", "Tool call invalid syntax: " + raw_function + 'expected <tool>{"type": "function", "name": "func_name", ...}</tool>')
+            tool_calls.append((function["name"], function["parameters"]))
     return tool_calls
+
+def is_json(s):
+    try:
+        parsed = json.loads(s)
+        # Return True for valid objects and not for ints, strings, etc
+        return isinstance(parsed, dict)
+    except json.JSONDecodeError:
+        return False
+    return True
 
 CUSTOM_TOOL_CALL_PATTERN = r"<function=(?P<function_name>[^}]+)>(?P<args>{.*?})"
 
