@@ -41,6 +41,18 @@ if not llama_stack_url:
     raise ValueError("LLAMA_STACK_URL is not set in the environment variables")
 client = LlamaStackClient(base_url=llama_stack_url)
 
+# Read in already completed instances from eval.log
+completed_instances = set()
+eval_log_path = os.path.join(eval_dir, "eval.log")
+if os.path.exists(eval_log_path):
+    with open(eval_log_path) as f:
+        for line in f:
+            instance_id = line.split(",")[0]
+            completed_instances.add(instance_id)
+
+# Filter out already completed instances
+df_django = df_django[~df_django['instance_id'].isin(completed_instances)].reset_index(drop=True)
+
 for index, row in df_django.iterrows():
     instance_id = row['instance_id']
     os.system(f"python setup7.py {instance_id}")
