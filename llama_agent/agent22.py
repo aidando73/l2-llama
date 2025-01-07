@@ -408,9 +408,9 @@ def parse_tool_calls(
                     tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", "name": "func_name", ...}'))
                 tool_calls.append((func["name"], func["parameters"]))
         else:
-            if "type" not in func or func["type"] != "function":
+            if "type" not in function or function["type"] != "function":
                 tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", ...}'))
-            if "name" not in func:
+            if "name" not in function:
                 tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", "name": "func_name", ...}'))
             tool_calls.append((function["name"], function["parameters"]))
     return tool_calls
