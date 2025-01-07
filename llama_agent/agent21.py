@@ -189,7 +189,6 @@ def run_agent(
             msg = f"[{tool_name}{display_tool_params(tool_params)}]"
             message += header("tool")
             message += "Executing tool call: " + msg + "\n"
-            message += msg + "\n"
             print("Executing tool call: " + blue(msg))
 
             try:
