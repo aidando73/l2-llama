@@ -419,7 +419,7 @@ def is_json(s):
     try:
         parsed = json.loads(s)
         # Return True for valid objects and not for ints, strings, etc
-        return isinstance(parsed, dict)
+        return isinstance(parsed, dict) or isinstance(parsed, list)
     except json.JSONDecodeError:
         return False
     return True
