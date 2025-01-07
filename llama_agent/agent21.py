@@ -44,7 +44,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
     def gen(self, custom_tools: list[ToolDefinition]) -> str:
         template_str = textwrap.dedent(
             """
-            You are an expert software engineer specialized in code analysis, refactoring, and system modifications. Your primary focus is on understanding codebases and making precise, well-reasoned changes.
+            You are an expert software engineer.
             You will be given a problem statement in <problem_statement>
 
             Based on the <problem_statement>, you will need to make one or more function/tool calls to achieve the purpose.
@@ -140,7 +140,7 @@ def run_agent(
     You are in the working directory as specified in <working_directory>. Please specify paths in absolute paths only.
     I have included the top level files and directories in the repository in <file_tree>.
     Please start by listing out and viewing files in the repository to understand the problem.<|eot_id|>
-    """).strip()
+    """.strip())
 
     finished = False
     for i in range(ITERATIONS):
