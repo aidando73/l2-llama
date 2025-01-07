@@ -44,11 +44,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
     def gen(self, custom_tools: list[ToolDefinition]) -> str:
         template_str = textwrap.dedent(
             """
-            You are an expert software engineer.
-            You will be given a problem statement in <problem_statement>
-
-            Based on the <problem_statement>, you will need to make one or more function/tool calls to achieve the purpose.
-            If you decide to invoke any of the function(s), you MUST put it in the format of <tool>{"type": "function", "function": {"name": "func_name", "description": "func_desc", "parameters": {"type": "object", "properties": {"param_name1": {"type": "string", "description": "param_desc1"}, "param_name2": {"type": "string", "description": "param_desc2"}}}}}</tool>
+            Solve the users problem by making one or more function/tool calls.
             Here is a list of functions in JSON format:
             {% for t in custom_tools -%}
             {# manually setting up JSON because jinja sorts keys in unexpected ways -#}
@@ -115,21 +111,29 @@ def run_agent(
         list_files_in_repo(os.path.join(SANDBOX_DIR, repo), depth=2)
     )
     message += dedent(f"""
+    You are an expert software engineer.
+                      
+    You are in the following working directory:
+
     <working_directory>
     {os.path.join(AGENT_WORKING_DIR, repo)}
     </working_directory>
+
+    Please specify paths in absolute paths only. For example, if you want to edit the file `file.py`, you should specify the path as `/workspace/repo/file.py`.
+    Here is the file tree of the repository:
 
     <file_tree>
     {files_in_repo}
     </file_tree>
 
+    This is the problem statement:
+    
     <problem_statement>
     {problem_statement}
     </problem_statement>
 
-    You are in the working directory as specified in <working_directory>. Please specify paths in absolute paths only.
-    I have included the top level files and directories in the repository in <file_tree>.
-    Please start by listing out and viewing files in the repository to understand the problem.<|eot_id|>
+    Please start by listing out and viewing files in the repository to understand the problem.
+    And make the necessary changes to solve the problem.<|eot_id|>
     """.strip())
 
     finished = False
@@ -392,6 +396,7 @@ def parse_tool_calls(
         except Exception as e:
             tool_calls.append(("error", f"Tool call invalid syntax: {raw_function} {e}"))
     
+    print(len(tool_calls), is_json(content))
     if len(tool_calls) == 0 and is_json(content):
         # Sometimes the tool call is a list of functions
         function = json.loads(content)
