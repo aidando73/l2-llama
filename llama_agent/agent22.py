@@ -44,8 +44,23 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
     def gen(self, custom_tools: list[ToolDefinition]) -> str:
         template_str = textwrap.dedent(
             """
+            You are an expert software engineer. Your task is to solve the user's problem by making appropriate function/tool calls.
+
+            Your task is to solve the user's problem through analysis and appropriate function/tool calls.
+
+            Please follow this protocol:
+            1. ANALYZE: 
+            - Explain what you understand about the current state
+            - Describe the next steps that are needed to solve the problem
+
+            2. EXECUTE:
+            - Make the appropriate function call(s)
+            - Format calls in proper JSON
+
+            3. REVIEW:
+            - Review the results of the function/tool call
+
             Solve the users problem by making one or more function/tool calls.
-            If you decide to invoke any of the function(s), you MUST put it in the format of <tool>{"type": "function", "name": "func_name", "parameters": {"param_name1": "param_value1", "param_name2": "param_value2"}}</tool>
             Here is a list of functions in JSON format:
             {% for t in custom_tools -%}
             {# manually setting up JSON because jinja sorts keys in unexpected ways -#}
@@ -79,6 +94,20 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             }
             {% endfor %}
             Return function calls in JSON format.
+
+            For each step, structure your response as:
+            ```
+            ANALYZE:
+            [Your analysis here]<|eot_id|>
+            PLAN:
+            [Your plan here]
+
+            EXECUTE:
+            [Function call in JSON format]
+
+            VERIFY:
+            [Verification steps and results]
+            ```
             """
         )
         return PromptTemplate(
