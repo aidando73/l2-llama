@@ -402,16 +402,16 @@ def parse_tool_calls(
         function = json.loads(content)
         if isinstance(function, list):
             for func in function:
-                if "type" not in function or function["type"] != "function":
-                    return ("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", ...}')
-                if "name" not in function:
-                    return ("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", "name": "func_name", ...}')
+                if "type" not in func or func["type"] != "function":
+                    tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", ...}'))
+                if "name" not in func:
+                    tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", "name": "func_name", ...}'))
                 tool_calls.append((func["name"], func["parameters"]))
         else:
-            if "type" not in function or function["type"] != "function":
-                    return ("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", ...}')
-            if "name" not in function:
-                return ("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", "name": "func_name", ...}')
+            if "type" not in func or func["type"] != "function":
+                tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", ...}'))
+            if "name" not in func:
+                tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", "name": "func_name", ...}'))
             tool_calls.append((function["name"], function["parameters"]))
     return tool_calls
 
