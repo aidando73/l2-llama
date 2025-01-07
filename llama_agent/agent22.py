@@ -133,7 +133,7 @@ def run_agent(
     </problem_statement>
 
     Please start by listing out and viewing files in the repository to understand the problem.
-    And make the necessary changes to solve the problem.<|eot_id|>
+    Then make the necessary changes to solve the problem.<|eot_id|>
     """.strip())
 
     finished = False
