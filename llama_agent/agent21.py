@@ -79,7 +79,6 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             {"name": "{{tname}}", "description": "{{tdesc}}", "parameters": {{tparams}}}
 
             {% endfor -%}
-            If you choose to call a function ONLY reply in the following format:
 
             When making function calls, use the following format while including your explanatory text:
             - Include your reasoning and analysis in <thinking> tags
