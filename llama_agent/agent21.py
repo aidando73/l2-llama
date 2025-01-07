@@ -48,13 +48,21 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             You will be given a problem statement in <problem_statement>
 
             Based on the <problem_statement>, you will need to make one or more function/tool calls to achieve the purpose.
-            You have access to the following functions:
 
             Before making any function calls, analyze the problem statement in these steps:
             1. Identify the files that are relevant to the problem
             2. Locate the affected files
             3. Plan the necessary changes to the files.
+            
             Explain this reasoning using <thinking> tags.
+
+            When making function calls:
+            - Verify all required parameters are correctly formatted
+            - Double-check file paths for accuracy
+            - Confirm changes before making irreversible modifications
+            - Include error handling considerations in your thinking process
+
+            You have access to the following functions:
 
             {% for t in custom_tools %}
             {#- manually setting up JSON because jinja sorts keys in unexpected ways -#}
@@ -73,7 +81,11 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             {% endfor -%}
             If you choose to call a function ONLY reply in the following format:
 
-            <function=example_function_name>{"example_name": "example_value"}</function>
+            When making function calls, use the following format while including your explanatory text:
+            - Include your reasoning and analysis in <thinking> tags
+            - Format each function call as:
+            <function=function_name>{"parameter_name": "parameter_value"}</function>
+            - You may include multiple function calls and explanatory text in your response
 
             Reminder:
             1. Function calls MUST follow the specified format, start with <function= and end with </function>
