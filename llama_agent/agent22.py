@@ -45,6 +45,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
         template_str = textwrap.dedent(
             """
             Solve the users problem by making one or more function/tool calls.
+            If you decide to invoke any of the function(s), you MUST put it in the format of <tool>{"type": "function", "name": "func_name", "parameters": {"param_name1": "param_value1", "param_name2": "param_value2"}}</tool>
             Here is a list of functions in JSON format:
             {% for t in custom_tools -%}
             {# manually setting up JSON because jinja sorts keys in unexpected ways -#}
