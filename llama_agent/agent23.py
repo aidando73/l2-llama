@@ -33,9 +33,6 @@ MODEL_ID = "meta-llama/Llama-3.1-405B-Instruct-FP8"
 ITERATIONS = 15
 
 SANDBOX_DIR = os.path.join(REPO_DIR, "sandbox")
-# We give the agent a virtual working directory so it doesn't have to worry about long absolute paths
-AGENT_WORKING_DIR = "/workspace/"
-
 tokenizer = Tokenizer.get_instance()
 formatter = ChatFormat(tokenizer)
 
@@ -305,7 +302,7 @@ TOOLS = [
 
 
 def execute_tool_call(
-    tool_name: str, tool_params: dict[str, str]
+    tool_name: str, tool_params: dict[str, str], repo: str
 ) -> Union[Tuple[Literal["success"], str], Tuple[Literal["error"], str]]:
     """
     Execute a tool call and return a message indicating the result of the tool call.
@@ -328,7 +325,7 @@ def execute_tool_call(
         ):
             return ("error", error)
 
-        path = translate_path(tool_params["path"])
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         files = list_files_in_repo(path, depth=1)
         return ("success", "\n".join(files))
 
@@ -343,7 +340,7 @@ def execute_tool_call(
         ):
             return ("error", error)
 
-        path = translate_path(tool_params["path"])
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         with open(f"{path}", "r") as f:
             old_file_content = f.read()
         if "old_str" in tool_params:
@@ -381,7 +378,7 @@ def execute_tool_call(
         ):
             return ("error", error)
 
-        path = translate_path(tool_params["path"])
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         with open(f"{path}", "r") as f:
             file_content = f.read()
         return ("success", file_content)
@@ -391,13 +388,6 @@ def execute_tool_call(
 
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
-
-
-def translate_path(path: str) -> str:
-    if path.startswith(AGENT_WORKING_DIR):
-        return os.path.join(SANDBOX_DIR, path[len(AGENT_WORKING_DIR) :])
-    else:
-        return os.path.join(SANDBOX_DIR, path)
 
 
 def parse_tool_calls(
