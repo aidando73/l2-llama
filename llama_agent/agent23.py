@@ -198,39 +198,36 @@ def run_agent(
             content=message,
         )
         message += response.content
-        message += f"<|eot_id|>"
 
         raw_tool_call += response.content
         print(f"EXECUTE: {blue(raw_tool_call)}")
         # Evaluate tool calls
         tool_calls = parse_tool_calls(raw_tool_call)
         for tool_call in tool_calls:
-
             if tool_call[0] == "error":
                 _, error_message = tool_call
                 msg = f"ERROR - Could not parse tool call: {error_message}"
                 print(red(msg))
-                message += chat_message("tool", msg)
+                message += f"{msg}\n"
                 continue
 
-            tool_name, tool_params = tool_call
-            msg = f"[{tool_name}{display_tool_params(tool_params)}]"
-            message += header("tool")
-            message += "Executing tool call: " + msg + "\n"
-            print("Executing tool call: " + cyan(msg))
+            tool_name, tool_params, full_tool_call = tool_call
+
+            message += "TOOL_CALL: " + json.dumps(full_tool_call) + "\n"
+            print("TOOL_CALL: " + cyan(json.dumps(full_tool_call)))
 
             try:
                 result, result_msg = execute_tool_call(tool_name, tool_params, repo)
             except Exception as e:
                 result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
-            message += f"Result: {result_msg}\n"
+            message += f"{result_msg}\n"
 
             if result == "success":
                 # Truncate the result message to 200 characters since it can be long
-                print("Result: " + result_msg[:200] + "...")
+                print(result_msg[:200] + "...")
             else:
-                print("Result: " + result_msg)
+                print(result_msg)
 
             message += f"<|eot_id|>"
 
@@ -247,7 +244,9 @@ def run_agent(
             os.path.join(eval_dir, "trajs", f"{instance_id}-prompt.txt"), "w"
         ) as f:
             f.write(message)
-
+    else:
+        with open("prompt.txt", "w") as f:
+            f.write(message)
 
 TOOLS = [
     ToolDefinition(
@@ -407,33 +406,6 @@ def parse_tool_calls(
                 - error_message (str): The error message
     """
     tool_calls = []
-    for match in re.finditer(r"<tool>(.*?)</tool>", content, re.DOTALL):
-        raw_function = match.group(1)
-        try:
-            function = json.loads(raw_function)
-            if "type" not in function or function["type"] != "function":
-                return (
-                    "error",
-                    "Tool call invalid syntax: "
-                    + raw_function
-                    + 'expected <tool>{"type": "function", ...}</tool>',
-                )
-            if "name" not in function:
-                return (
-                    "error",
-                    "Tool call invalid syntax: "
-                    + raw_function
-                    + 'expected <tool>{"type": "function", "name": "func_name", ...}</tool>',
-                )
-            function_name = function["name"]
-            args = function["parameters"]
-            tool_calls.append((function_name, args))
-        except Exception as e:
-            tool_calls.append(
-                ("error", f"Tool call invalid syntax: {raw_function} {e}")
-            )
-
-    print(len(tool_calls), is_json(content))
     if len(tool_calls) == 0 and is_json(content):
         # Sometimes the tool call is a list of functions
         function = json.loads(content)
@@ -457,7 +429,7 @@ def parse_tool_calls(
                             + 'expected {"type": "function", "name": "func_name", ...}',
                         )
                     )
-                tool_calls.append((func["name"], func["parameters"]))
+                tool_calls.append((func["name"], func["parameters"], func))
         else:
             if "type" not in function or function["type"] != "function":
                 tool_calls.append(
@@ -477,7 +449,7 @@ def parse_tool_calls(
                         + 'expected {"type": "function", "name": "func_name", ...}',
                     )
                 )
-            tool_calls.append((function["name"], function["parameters"]))
+            tool_calls.append((function["name"], function["parameters"], function))
     if len(tool_calls) == 0:
         return [("error", content)]
     return tool_calls
@@ -497,16 +469,7 @@ CUSTOM_TOOL_CALL_PATTERN = r"<function=(?P<function_name>[^}]+)>(?P<args>{.*?})"
 
 
 def display_tool_params(tool_params: dict[str, str]):
-    return (
-        "("
-        + ", ".join(
-            [
-                param_name + '="' + str(param_value) + '"'
-                for param_name, param_value in tool_params.items()
-            ]
-        )
-        + ")"
-    )
+    return json.dumps(tool_params)
 
 
 def validate_param_exists(
