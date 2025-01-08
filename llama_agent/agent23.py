@@ -202,10 +202,10 @@ def run_agent(
         message += response.content
         message += f"<|eot_id|>"
 
-        print(f"EXECUTE: {blue(response.content)}")
         raw_tool_call += response.content
+        print(f"EXECUTE: {blue(raw_tool_call)}")
         # Evaluate tool calls
-        tool_calls = parse_tool_calls(response.content)
+        tool_calls = parse_tool_calls(raw_tool_call)
         for tool_call in tool_calls:
 
             if tool_call[0] == "error":
