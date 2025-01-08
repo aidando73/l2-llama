@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import pandas as pd
 from subprocess import run
 from argparse import ArgumentParser
+import re
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -41,6 +42,7 @@ def main():
     client = LlamaStackClient(base_url="http://localhost:5000")
 
     for index, row in df.iterrows():
+        print(f"Running instance {row['instance_id']}")
         _, repo_name = row["repo"].split("/")
         repo_path = os.path.join(SCRIPT_DIR, "sandbox", repo_name)
         base_commit = row["base_commit"]
@@ -100,7 +102,7 @@ def setup_sandbox(df):
 
         # Sympy uses python 3.9
         run(
-            f"conda create -y -p {SCRIPT_DIR}/sandbox/sympy/env_3_9 python=3.9",
+            f"conda create -y -p {SCRIPT_DIR}/sandbox/sympy/env_3_9 python=3.9 mpmath flake8",
             shell=True,
             check=True,
         )
@@ -110,7 +112,7 @@ def setup_sandbox(df):
             f.write("Marker file")
 
 
-def validate_instance(row):
+def validate_instance(row, eval_dir = None):
     repo_name = row["repo"].split("/")[-1]
     test_patch = row["test_patch"]
     with open(os.path.join(SCRIPT_DIR, "sandbox", repo_name, "test.patch"), "w") as f:
@@ -133,7 +135,51 @@ def validate_instance(row):
     test_patch = row['test_patch']
     directives = re.findall(diff_pat, test_patch)
 
+    # For Django tests, remove extension + "tests/" prefix and convert slashes to dots (module referencing)
+    if repo_name == "django/django":
+        directives_transformed = []
+        for d in directives:
+            d = d[: -len(".py")] if d.endswith(".py") else d
+            d = d[len("tests/") :] if d.startswith("tests/") else d
+            d = d.replace("/", ".")
+            directives_transformed.append(d)
+        directives = directives_transformed
+
+    if repo_name == "django/django":
+        cmd = run(
+            f"cd {SCRIPT_DIR}/sandbox/{repo_name} && "
+            f"source ~/miniconda3/bin/activate && "
+            f"conda activate ./{environment} && "
+            f"./tests/runtests.py --settings=test_sqlite --parallel 1 {' '.join(directives)}",
+            shell=True
+        )
+    else:
+        cmd = run(
+            f"cd {SCRIPT_DIR}/sandbox/{repo_name} && "
+            f"source ~/miniconda3/bin/activate && "
+            f"conda activate ./{environment} && "
+            f"pip install mpmath==1.3.0 flake8-comprehensions && "
+            f"python -m pip install -e . && "
+            f"PYTHONWARNINGS='ignore::UserWarning,ignore::SyntaxWarning' bin/test -C --verbose {' '.join(directives)}",
+            shell=True
+        )
+
+    if cmd.returncode == 0:
+        print('\033[92mTest passed\033[0m')
+        result = "pass"
+    else:
+        print('\033[91mTest failed\033[0m')
+        result = "fail"
+
+    if eval_dir:
+        with open(os.path.join(eval_dir, "eval.log"), 'a') as f:
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"{sample_row['instance_id']},{result},{timestamp}\n")
     
+    print("Reverting patch...")
+    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git apply -R test.patch", shell=True, check=True)
+    os.remove(os.path.join(SCRIPT_DIR, "sandbox", repo_name, "test.patch"))
+    print('Patch reverted')
 
 
 if __name__ == "__main__":
