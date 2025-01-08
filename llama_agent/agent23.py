@@ -52,11 +52,6 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
 
             The repo is called {{ repo }}.
 
-            Here is the file tree of the repository:
-            <file_tree>
-            {{ file_tree }}
-            </file_tree>
-
             Your task is to solve the user's problem through analysis and appropriate function/tool calls.
 
             You can perform only one of the following steps at a time:
@@ -120,17 +115,12 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             Then make the necessary changes to solve the problem.<|eot_id|>
             """
         )
-
-        files_in_repo = "\n".join(
-            list_files_in_repo(os.path.join(SANDBOX_DIR, repo), depth=1)
-        )
         return PromptTemplate(
             template_str.lstrip("\n"),
             {
                 "custom_tools": [t.model_dump() for t in custom_tools],
                 "problem_statement": problem_statement,
                 "repo": repo,
-                "file_tree": files_in_repo,
             },
         )
 
