@@ -117,7 +117,6 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
 
             EXECUTE:
             [Function call in JSON format]
-            
 
             Please specify paths in absolute paths only. For example, if you want to edit the file `file.py`, you should specify the path as `/workspace/repo/file.py`.
             Please start by listing out and viewing files in the repository to understand the problem.
