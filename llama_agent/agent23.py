@@ -317,30 +317,31 @@ def execute_tool_call(
             ("error", error_message): The error message if the tool call failed.
     """
     if tool_name == "list_files":
+        if error := validate_param_exists("path", tool_params):
+            return ("error", error)
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         if (
-            error := validate_param_exists("path", tool_params)
-            or validate_not_symlink(tool_params["path"])
-            or validate_path_in_sandbox(tool_params["path"])
-            or validate_directory_exists(tool_params["path"])
+            error := validate_not_symlink(path)
+            or validate_path_in_sandbox(path)
+            or validate_directory_exists(path)
         ):
             return ("error", error)
 
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         files = list_files_in_repo(path, depth=1)
         return ("success", "\n".join(files))
 
     elif tool_name == "edit_file":
+        if error := validate_param_exists("path", tool_params):
+            return ("error", error)
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         if (
-            error := validate_param_exists("path", tool_params)
-            or validate_path_in_sandbox(tool_params["path"])
-            or validate_param_exists("new_str", tool_params)
-            or validate_not_symlink(tool_params["path"])
-            or validate_file_exists(tool_params["path"])
-            or validate_not_a_directory(tool_params["path"])
+            error := validate_path_in_sandbox(path)
+            or validate_not_symlink(path)
+            or validate_file_exists(path)
+            or validate_not_a_directory(path)
         ):
             return ("error", error)
 
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         with open(f"{path}", "r") as f:
             old_file_content = f.read()
         if "old_str" in tool_params:
@@ -369,16 +370,17 @@ def execute_tool_call(
         return ("success", "File successfully updated\n" + "\n".join(diff))
 
     elif tool_name == "view_file":
+        if error := validate_param_exists("path", tool_params):
+            return ("error", error)
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         if (
-            error := validate_param_exists("path", tool_params)
-            or validate_not_symlink(tool_params["path"])
-            or validate_path_in_sandbox(tool_params["path"])
-            or validate_file_exists(tool_params["path"])
-            or validate_not_a_directory(tool_params["path"])
+            error := validate_not_symlink(path)
+            or validate_path_in_sandbox(path)
+            or validate_file_exists(path)
+            or validate_not_a_directory(path)
         ):
             return ("error", error)
 
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         with open(f"{path}", "r") as f:
             file_content = f.read()
         return ("success", file_content)
