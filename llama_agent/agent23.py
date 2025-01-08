@@ -549,7 +549,7 @@ def validate_not_symlink(path: str) -> Optional[str]:
 
 def validate_file_exists(path: str) -> Optional[str]:
     if not os.path.exists(path):
-        return f"ERROR - File {path} does not exist. Please ensure the path is an absolute path and that the file exists."
+        return f"ERROR - File {path} does not exist. Please ensure the file exists."
     return None
 
 
@@ -561,7 +561,7 @@ def validate_not_a_directory(path: str) -> Optional[str]:
 
 def validate_directory_exists(path: str) -> Optional[str]:
     if not os.path.exists(path):
-        return f"ERROR - Directory {path} does not exist. Please ensure the path is an absolute path and that the directory exists."
+        return f"ERROR - Directory {path} does not exist. Please ensure the directory exists."
     return None
 
 
