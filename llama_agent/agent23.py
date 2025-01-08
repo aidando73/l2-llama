@@ -41,7 +41,9 @@ formatter = ChatFormat(tokenizer)
 
 
 class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
-    def gen(self, problem_statement: str, repo: str, custom_tools: list[ToolDefinition]) -> str:
+    def gen(
+        self, problem_statement: str, repo: str, custom_tools: list[ToolDefinition]
+    ) -> str:
         template_str = textwrap.dedent(
             """
             <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -137,6 +139,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             },
         )
 
+
 def run_agent(
     client: LlamaStackClient,
     repo: str,
@@ -151,7 +154,11 @@ def run_agent(
             or ("no_changes_made", reasoning, None): "no_changes_made", the reason why no changes were made, and None
     """
 
-    message = L2SystemPromptGenerator().gen(TOOLS, repo).render()
+    message = (
+        L2SystemPromptGenerator()
+        .gen(problem_statement=problem_statement, repo=repo, custom_tools=TOOLS)
+        .render()
+    )
 
     finished = False
     for i in range(ITERATIONS):
@@ -175,7 +182,7 @@ def run_agent(
             # we want it to respond in separate turns so it's easier to pre-empt the model
             # and parse the tool call
             # print("DEBUG", response.content)
-            analyse_statement = response.content[:response.content.find("EXECUTE:")]
+            analyse_statement = response.content[: response.content.find("EXECUTE:")]
             analyse_statement = analyse_statement.rstrip()
         else:
             analyse_statement = response.content
@@ -354,12 +361,14 @@ def execute_tool_call(
                 f.write(tool_params["new_str"])
                 new_content = tool_params["new_str"]
         # Get diff between old and new content
-        diff = list(difflib.unified_diff(
-            old_file_content.splitlines(keepends=True),
-            new_content.splitlines(keepends=True),
-            fromfile='before',
-            tofile='after'
-        ))
+        diff = list(
+            difflib.unified_diff(
+                old_file_content.splitlines(keepends=True),
+                new_content.splitlines(keepends=True),
+                fromfile="before",
+                tofile="after",
+            )
+        )
         if len(diff) == 0:
             return ("error", "No changes made to file")
         return ("success", "File successfully updated\n" + "\n".join(diff))
@@ -417,15 +426,27 @@ def parse_tool_calls(
         try:
             function = json.loads(raw_function)
             if "type" not in function or function["type"] != "function":
-                return ("error", "Tool call invalid syntax: " + raw_function + 'expected <tool>{"type": "function", ...}</tool>')
+                return (
+                    "error",
+                    "Tool call invalid syntax: "
+                    + raw_function
+                    + 'expected <tool>{"type": "function", ...}</tool>',
+                )
             if "name" not in function:
-                return ("error", "Tool call invalid syntax: " + raw_function + 'expected <tool>{"type": "function", "name": "func_name", ...}</tool>')
+                return (
+                    "error",
+                    "Tool call invalid syntax: "
+                    + raw_function
+                    + 'expected <tool>{"type": "function", "name": "func_name", ...}</tool>',
+                )
             function_name = function["name"]
             args = function["parameters"]
             tool_calls.append((function_name, args))
         except Exception as e:
-            tool_calls.append(("error", f"Tool call invalid syntax: {raw_function} {e}"))
-    
+            tool_calls.append(
+                ("error", f"Tool call invalid syntax: {raw_function} {e}")
+            )
+
     print(len(tool_calls), is_json(content))
     if len(tool_calls) == 0 and is_json(content):
         # Sometimes the tool call is a list of functions
@@ -433,17 +454,46 @@ def parse_tool_calls(
         if isinstance(function, list):
             for func in function:
                 if "type" not in func or func["type"] != "function":
-                    tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", ...}'))
+                    tool_calls.append(
+                        (
+                            "error",
+                            "Tool call invalid syntax: "
+                            + content
+                            + 'expected {"type": "function", ...}',
+                        )
+                    )
                 if "name" not in func:
-                    tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", "name": "func_name", ...}'))
+                    tool_calls.append(
+                        (
+                            "error",
+                            "Tool call invalid syntax: "
+                            + content
+                            + 'expected {"type": "function", "name": "func_name", ...}',
+                        )
+                    )
                 tool_calls.append((func["name"], func["parameters"]))
         else:
             if "type" not in function or function["type"] != "function":
-                tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", ...}'))
+                tool_calls.append(
+                    (
+                        "error",
+                        "Tool call invalid syntax: "
+                        + content
+                        + 'expected {"type": "function", ...}',
+                    )
+                )
             if "name" not in function:
-                tool_calls.append(("error", "Tool call invalid syntax: " + content + 'expected {"type": "function", "name": "func_name", ...}'))
+                tool_calls.append(
+                    (
+                        "error",
+                        "Tool call invalid syntax: "
+                        + content
+                        + 'expected {"type": "function", "name": "func_name", ...}',
+                    )
+                )
             tool_calls.append((function["name"], function["parameters"]))
     return tool_calls
+
 
 def is_json(s):
     try:
@@ -454,7 +504,9 @@ def is_json(s):
         return False
     return True
 
+
 CUSTOM_TOOL_CALL_PATTERN = r"<function=(?P<function_name>[^}]+)>(?P<args>{.*?})"
+
 
 def display_tool_params(tool_params: dict[str, str]):
     return (
