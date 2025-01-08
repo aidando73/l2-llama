@@ -192,7 +192,8 @@ def run_agent(
         message += header("assistant")
         message += "EXECUTE: \n"
         # Pre-empt the tool call to prevent poor tool call formatting
-        message += '{"type": "function", "name": "'
+        raw_tool_call = '{"type": "function", "name": "'
+        message += raw_tool_call
         print(f"Input tokens: {token_count(message)}")
         response = client.inference.completion(
             model_id=MODEL_ID,
@@ -202,7 +203,7 @@ def run_agent(
         message += f"<|eot_id|>"
 
         print(f"EXECUTE: {blue(response.content)}")
-
+        raw_tool_call += response.content
         # Evaluate tool calls
         tool_calls = parse_tool_calls(response.content)
         for tool_call in tool_calls:
