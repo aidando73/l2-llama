@@ -96,18 +96,19 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             Return function calls in JSON format.
 
             For each step, structure your response as:
-            ```
+            <|start_header_id|>assistant<|end_header_id|>
+
             ANALYZE:
-            [Your analysis here]<|eot_id|>
-            PLAN:
-            [Your plan here]
+            [Your analysis here]<|eot_id|><start_header_id|>assistant<|end_header_id|>
 
             EXECUTE:
-            [Function call in JSON format]
+            [Function call in JSON format]<|eot_id|><start_header_id|>tool<|end_header_id|>
+            Executing tool call: [Function call in JSON format]
+            Result: [Result of the tool call]
+            <|eot_id|><start_header_id|>assistant<|end_header_id|>
 
-            VERIFY:
-            [Verification steps and results]
-            ```
+            REVIEW:
+            [Verification steps and results]<|eot_id|><start_header_id|>assistant<|end_header_id|>
             """
         )
         return PromptTemplate(
