@@ -124,7 +124,7 @@ screen -r agent-eval
 
 # 1. Check that the changes are in the agent
 # 2. Run the eval
-eval_dir=$(realpath evals/v23.2) && \
+eval_dir=$(realpath evals/v23.4) && \
 mkdir -p $eval_dir && \
 python eval7.py $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
