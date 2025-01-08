@@ -9,7 +9,6 @@ from subprocess import run
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
 def main():
     load_dotenv()
     # Force Python to flush prints immediately
@@ -20,12 +19,13 @@ def main():
 
     df = pd.read_parquet('test_data8.parquet')
 
-    setup_sandbox()
+    setup_sandbox(df=df)
+
+    for row in df.iterrows():
+        print(row)
 
 
-
-
-def setup_sandbox():
+def setup_sandbox(df):
     # Create sandbox directory if it doesn't exist
     os.makedirs(os.path.join(SCRIPT_DIR, "sandbox"), exist_ok=True)
 
@@ -52,7 +52,6 @@ def setup_sandbox():
         # Marker file to indicate that the sandbox is ready
         with open(os.path.join(SCRIPT_DIR, "sandbox", "ready.txt"), "w") as f:
             f.write("Marker file")
-
 
 if __name__ == "__main__":
     main()
