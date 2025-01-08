@@ -21,7 +21,7 @@ from llama_models.llama3.prompt_templates.system_prompts import (
 )
 from llama_agent.utils.file_tree import list_files_in_repo
 from llama_agent import REPO_DIR
-from llama_agent.utils.ansi import red, yellow, magenta, blue
+from llama_agent.utils.ansi import red, yellow, magenta, blue, cyan
 from subprocess import run
 from textwrap import dedent
 import textwrap
@@ -186,6 +186,7 @@ def run_agent(
         message += response.content
         message += f"<|eot_id|>"
 
+        print(f"ANALYSE: {magenta(response.content)}")
 
         # EXECUTE
         message += header("assistant")
@@ -197,6 +198,8 @@ def run_agent(
         )
         message += response.content
         message += f"<|eot_id|>"
+
+        print(f"EXECUTE: {blue(response.content)}")
 
         # Evaluate tool calls
         tool_calls = parse_tool_calls(response.content)
@@ -213,7 +216,7 @@ def run_agent(
             msg = f"[{tool_name}{display_tool_params(tool_params)}]"
             message += header("tool")
             message += "Executing tool call: " + msg + "\n"
-            print("Executing tool call: " + blue(msg))
+            print("Executing tool call: " + cyan(msg))
 
             try:
                 result, result_msg = execute_tool_call(tool_name, tool_params)
