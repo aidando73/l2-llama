@@ -21,10 +21,7 @@ def main():
 
     setup_sandbox(df=df)
 
-    llama_stack_url = os.getenv("LLAMA_STACK_URL")
-    if not llama_stack_url:
-        raise ValueError("LLAMA_STACK_URL is not set in the environment variables")
-    client = LlamaStackClient(base_url=llama_stack_url)
+    client = LlamaStackClient(base_url="http://localhost:5000")
 
     for index, row in df.iterrows():
         _, repo_name = row['repo'].split('/')
