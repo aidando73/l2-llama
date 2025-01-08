@@ -483,7 +483,7 @@ def parse_tool_calls(
                 )
             tool_calls.append((function["name"], function["parameters"]))
     if len(tool_calls) == 0:
-        return [("error", "Could not parse tool call: " + content)]
+        return [("error", content)]
     return tool_calls
 
 
