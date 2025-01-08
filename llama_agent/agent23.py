@@ -180,7 +180,7 @@ def run_agent(
         message += header("assistant")
         message += "EXECUTE: \n"
         # Pre-empt the tool call to prevent poor tool call formatting
-        raw_tool_call = '{"type": "function", "name": "'
+        raw_tool_call = '[{"type": "function", "name": "'
         message += raw_tool_call
         print(f"Input tokens: {token_count(message)}")
         response = client.inference.completion(
