@@ -18,13 +18,23 @@ def main():
 
     parser = ArgumentParser()
     parser.add_argument("--eval_dir", type=str, required=False)
-    parser.add_argument("--num_instances", type=int, required=False, default=None)
+    parser.add_argument(
+        "--num_instances",
+        type=int,
+        required=False,
+        default=None,
+        help="Number of instances to run. If eval_dir is not defined, will run only 1 instance",
+    )
     args = parser.parse_args()
 
     df = pd.read_parquet("test_data8.parquet")
 
-    if args.num_instances:
-        df = df.sample(n=args.num_instances)
+    num_instances = args.num_instances
+    if num_instances == None and args.eval_dir == None:
+        num_instances = 1
+
+    if num_instances:
+        df = df.sample(n=num_instances)
 
     setup_sandbox(df=df)
 
