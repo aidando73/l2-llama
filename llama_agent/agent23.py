@@ -370,7 +370,7 @@ def execute_tool_call(
             )
         )
         if len(diff) == 0:
-            return ("error", "No changes made to file")
+            return ("error", "ERROR - No changes made to file")
         return ("success", "File successfully updated\n" + "\n".join(diff))
 
     elif tool_name == "view_file":
