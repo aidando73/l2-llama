@@ -220,7 +220,7 @@ def run_agent(
             print("Executing tool call: " + cyan(msg))
 
             try:
-                result, result_msg = execute_tool_call(tool_name, tool_params)
+                result, result_msg = execute_tool_call(tool_name, tool_params, repo)
             except Exception as e:
                 result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
@@ -530,7 +530,6 @@ def validate_path_in_sandbox(path: str) -> Optional[str]:
         Optional[str]: Error message if path is invalid, None if valid
     """
     # Resolve the absolute path after translation to catch any ../ tricks
-    path = translate_path(path)
     resolved_path = os.path.abspath(path)
     sandbox_path = os.path.abspath(SANDBOX_DIR)
 
@@ -541,25 +540,25 @@ def validate_path_in_sandbox(path: str) -> Optional[str]:
 
 
 def validate_not_symlink(path: str) -> Optional[str]:
-    if os.path.islink(translate_path(path)):
+    if os.path.islink(path):
         return f"ERROR - File {path} is a symlink. Simlinks not allowed"
     return None
 
 
 def validate_file_exists(path: str) -> Optional[str]:
-    if not os.path.exists(translate_path(path)):
+    if not os.path.exists(path):
         return f"ERROR - File {path} does not exist. Please ensure the path is an absolute path and that the file exists."
     return None
 
 
 def validate_not_a_directory(path: str) -> Optional[str]:
-    if os.path.isdir(translate_path(path)):
+    if os.path.isdir(path):
         return f"ERROR - File {path} is a directory. Please ensure the path references a file, not a directory."
     return None
 
 
 def validate_directory_exists(path: str) -> Optional[str]:
-    if not os.path.exists(translate_path(path)):
+    if not os.path.exists(path):
         return f"ERROR - Directory {path} does not exist. Please ensure the path is an absolute path and that the directory exists."
     return None
 
