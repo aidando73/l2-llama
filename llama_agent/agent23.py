@@ -317,31 +317,28 @@ def execute_tool_call(
             ("error", error_message): The error message if the tool call failed.
     """
     if tool_name == "list_files":
-        if error := validate_param_exists("path", tool_params):
-            return ("error", error)
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         if (
-            error := validate_not_symlink(path)
-            or validate_path_in_sandbox(path)
-            or validate_directory_exists(path)
+            error := validate_param_exists("path", tool_params)
+            or validate_not_symlink(repo, tool_params["path"])
+            or validate_path_in_sandbox(repo, tool_params["path"])
+            or validate_directory_exists(repo, tool_params["path"])
         ):
             return ("error", error)
 
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         files = list_files_in_repo(path, depth=1)
         return ("success", "\n".join(files))
 
     elif tool_name == "edit_file":
-        if error := validate_param_exists("path", tool_params):
-            return ("error", error)
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
-        if (
-            error := validate_path_in_sandbox(path)
-            or validate_not_symlink(path)
-            or validate_file_exists(path)
-            or validate_not_a_directory(path)
+        if (error := validate_param_exists("path", tool_params)
+            or validate_path_in_sandbox(repo, tool_params["path"])
+            or validate_not_symlink(repo, tool_params["path"])
+            or validate_file_exists(repo, tool_params["path"])
+            or validate_not_a_directory(repo, tool_params["path"])
         ):
             return ("error", error)
 
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         with open(f"{path}", "r") as f:
             old_file_content = f.read()
         if "old_str" in tool_params:
@@ -370,17 +367,16 @@ def execute_tool_call(
         return ("success", "File successfully updated\n" + "\n".join(diff))
 
     elif tool_name == "view_file":
-        if error := validate_param_exists("path", tool_params):
-            return ("error", error)
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         if (
-            error := validate_not_symlink(path)
-            or validate_path_in_sandbox(path)
-            or validate_file_exists(path)
-            or validate_not_a_directory(path)
+            error := validate_param_exists("path", tool_params)
+            or validate_not_symlink(repo, tool_params["path"])
+            or validate_path_in_sandbox(repo, tool_params["path"])
+            or validate_file_exists(repo, tool_params["path"])
+            or validate_not_a_directory(repo, tool_params["path"])
         ):
             return ("error", error)
 
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         with open(f"{path}", "r") as f:
             file_content = f.read()
         return ("success", file_content)
@@ -521,7 +517,7 @@ def validate_param_exists(
     return None
 
 
-def validate_path_in_sandbox(path: str) -> Optional[str]:
+def validate_path_in_sandbox(repo: str, path: str) -> Optional[str]:
     """
     Validate that a path stays within the sandbox directory.
 
@@ -532,7 +528,7 @@ def validate_path_in_sandbox(path: str) -> Optional[str]:
         Optional[str]: Error message if path is invalid, None if valid
     """
     # Resolve the absolute path after translation to catch any ../ tricks
-    resolved_path = os.path.abspath(path)
+    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
     sandbox_path = os.path.abspath(SANDBOX_DIR)
 
     if not resolved_path.startswith(sandbox_path):
@@ -541,26 +537,30 @@ def validate_path_in_sandbox(path: str) -> Optional[str]:
     return None
 
 
-def validate_not_symlink(path: str) -> Optional[str]:
-    if os.path.islink(path):
+def validate_not_symlink(repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+    if os.path.islink(resolved_path):
         return f"ERROR - File {path} is a symlink. Simlinks not allowed"
     return None
 
 
-def validate_file_exists(path: str) -> Optional[str]:
-    if not os.path.exists(path):
+def validate_file_exists(repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+    if not os.path.exists(resolved_path):
         return f"ERROR - File {path} does not exist. Please ensure the file exists."
     return None
 
 
-def validate_not_a_directory(path: str) -> Optional[str]:
-    if os.path.isdir(path):
+def validate_not_a_directory(repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+    if os.path.isdir(resolved_path):
         return f"ERROR - File {path} is a directory. Please ensure the path references a file, not a directory."
     return None
 
 
-def validate_directory_exists(path: str) -> Optional[str]:
-    if not os.path.exists(path):
+def validate_directory_exists(repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+    if not os.path.exists(resolved_path):
         return f"ERROR - Directory {path} does not exist. Please ensure the directory exists."
     return None
 
