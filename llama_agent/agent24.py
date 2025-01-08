@@ -249,13 +249,15 @@ def run_agent(
 
                         # Prompt for new content
                         message += chat_message("tool", "Please provide the new content to replace the old content with. Please format it in ```\nCODE\n``` format.")
+                        message += "<|eot_id|>"
+                        message += header("assistant")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
                             content=message,
                         )
                         message += response.content
-                        message += "<|eot_id|>"
                         new_content = response.content
+                        message += "<|eot_id|>"
 
                         print(f"Old content: {old_content}")
                         print(f"New content: {new_content}")
@@ -273,8 +275,8 @@ def run_agent(
                             result, result_msg = ("error", "ERROR - No changes made to file")
                         else:
                             result, result_msg = ("success", "File successfully updated\n" + "\n".join(diff))
-                
-                result, result_msg = execute_tool_call(tool_name, tool_params, repo)
+                else:
+                    result, result_msg = execute_tool_call(tool_name, tool_params, repo)
             except Exception as e:
                 result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
