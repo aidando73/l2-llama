@@ -41,10 +41,23 @@ formatter = ChatFormat(tokenizer)
 
 
 class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
-    def gen(self, custom_tools: list[ToolDefinition]) -> str:
+    def gen(self, custom_tools: list[ToolDefinition], repo: str) -> str:
         template_str = textwrap.dedent(
             """
-            You are an expert software engineer. Your task is to solve the user's problem by making appropriate function/tool calls.
+            <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+            
+            You are an expert software engineer. You are given the following problem:
+            <problem_statement>
+            {{ problem_statement }}
+            </problem_statement>
+            
+            You are in the following working directory: {{ working_directory }}
+
+            Here is the file tree of the repository:
+            <file_tree>
+            {{ file_tree }}
+            </file_tree>
+
 
             Your task is to solve the user's problem through analysis and appropriate function/tool calls.
 
@@ -103,12 +116,25 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             <|start_header_id|>assistant<|end_header_id|>
 
             EXECUTE:
-            [Function call in JSON format]<|eot_id|>
+            [Function call in JSON format]
+            
+
+            Please specify paths in absolute paths only. For example, if you want to edit the file `file.py`, you should specify the path as `/workspace/repo/file.py`.
+            Please start by listing out and viewing files in the repository to understand the problem.
+            Then make the necessary changes to solve the problem.<|eot_id|>
             """
+        )
+
+        files_in_repo = "\n".join(
+            list_files_in_repo(os.path.join(SANDBOX_DIR, repo), depth=2)
         )
         return PromptTemplate(
             template_str.lstrip("\n"),
-            {"custom_tools": [t.model_dump() for t in custom_tools]},
+            {
+                "custom_tools": [t.model_dump() for t in custom_tools],
+                "working_directory": os.path.join(AGENT_WORKING_DIR, repo),
+                "file_tree": files_in_repo,
+            },
         )
 
 def run_agent(
@@ -125,42 +151,7 @@ def run_agent(
             or ("no_changes_made", reasoning, None): "no_changes_made", the reason why no changes were made, and None
     """
 
-    # System prompt
-    message = "<|begin_of_text|>"
-    message += header("system")
-    message += L2SystemPromptGenerator().gen(TOOLS).render()
-    message += "<|eot_id|>"
-
-    # User prompt
-    message += header("user")
-    files_in_repo = "\n".join(
-        list_files_in_repo(os.path.join(SANDBOX_DIR, repo), depth=2)
-    )
-    message += dedent(f"""
-    You are an expert software engineer.
-                      
-    You are in the following working directory:
-
-    <working_directory>
-    {os.path.join(AGENT_WORKING_DIR, repo)}
-    </working_directory>
-
-    Please specify paths in absolute paths only. For example, if you want to edit the file `file.py`, you should specify the path as `/workspace/repo/file.py`.
-    Here is the file tree of the repository:
-
-    <file_tree>
-    {files_in_repo}
-    </file_tree>
-
-    This is the problem statement:
-    
-    <problem_statement>
-    {problem_statement}
-    </problem_statement>
-
-    Please start by listing out and viewing files in the repository to understand the problem.
-    Then make the necessary changes to solve the problem.<|eot_id|>
-    """.strip())
+    message = L2SystemPromptGenerator().gen(TOOLS, repo).render()
 
     finished = False
     for i in range(ITERATIONS):
