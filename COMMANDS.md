@@ -124,7 +124,7 @@ screen -r agent-eval
 
 # 1. Check that the changes are in the agent
 # 2. Run the eval
-eval_dir=$(realpath evals/v23.6-no-tree) && \
+eval_dir=$(realpath evals/v23.7-preempt-list) && \
 mkdir -p $eval_dir && \
 python eval7.py $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
@@ -134,6 +134,13 @@ source ~/miniconda3/bin/activate ./env
 log_file=$(date +%Y-%m-%d_%H-%M).log && \
 bash -c "python -u setup7.py && python -u run8.py && python -u validate7.py"  2>&1 | \
 stdbuf -o0 tee -a logs/$log_file
+
+# 1. Check that the changes are in the agent
+# 2. Run the eval
+eval_dir=$(realpath evals/v23.7.3-baseline) && \
+mkdir -p $eval_dir && \
+python eval8.py $eval_dir  2>&1 | \
+stdbuf -o0 tee -a $eval_dir/harness.log
 ```
 
 Dependencies:
