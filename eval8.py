@@ -146,7 +146,7 @@ def validate_instance(row, eval_dir = None):
     run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git apply test.patch", shell=True, check=True)
 
     # For Django tests, remove extension + "tests/" prefix and convert slashes to dots (module referencing)
-    if repo_name == "django/django":
+    if row["repo"] == "django/django":
         directives_transformed = []
         for d in directives:
             d = d[: -len(".py")] if d.endswith(".py") else d
@@ -155,7 +155,7 @@ def validate_instance(row, eval_dir = None):
             directives_transformed.append(d)
         directives = directives_transformed
 
-    if repo_name == "django/django":
+    if row["repo"] == "django/django":
         cmd = run(
             f"bash -c 'cd {SCRIPT_DIR}/sandbox/{repo_name} && "
             f"source ~/miniconda3/bin/activate && "
