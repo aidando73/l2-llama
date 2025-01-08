@@ -191,6 +191,8 @@ def run_agent(
         # EXECUTE
         message += header("assistant")
         message += "EXECUTE: \n"
+        # Pre-empt the tool call to prevent poor tool call formatting
+        message += '{"type": "function", "name": "'
         print(f"Input tokens: {token_count(message)}")
         response = client.inference.completion(
             model_id=MODEL_ID,
