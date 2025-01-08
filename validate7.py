@@ -17,7 +17,7 @@ eval_dir = sys.argv[1] if len(sys.argv) > 1 else None
 
 print("Applying patch...")
 os.system(f"cd {DJANGO_DIR} && git apply test.patch")
-print('\033[92mPatch applied\033[0m')
+print('Patch applied')
 
 if sample_row["version"] == "4.0":
     environment = "env_3_8"
