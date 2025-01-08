@@ -52,14 +52,13 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             <problem_statement>
             {{ problem_statement }}
             </problem_statement>
-            
-            You are in the following working directory: {{ working_directory }}
+
+            The repo is called {{ repo }}.
 
             Here is the file tree of the repository:
             <file_tree>
             {{ file_tree }}
             </file_tree>
-
 
             Your task is to solve the user's problem through analysis and appropriate function/tool calls.
 
@@ -118,9 +117,8 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             <|start_header_id|>assistant<|end_header_id|>
 
             EXECUTE:
-            [Function call in JSON format]
+            [Function call in JSON format]<|eot_id|>
 
-            Please specify paths in absolute paths only. For example, if you want to edit the file `file.py`, you should specify the path as `/workspace/repo/file.py`.
             Please start by listing out and viewing files in the repository to understand the problem.
             Then make the necessary changes to solve the problem.<|eot_id|>
             """
@@ -134,7 +132,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             {
                 "custom_tools": [t.model_dump() for t in custom_tools],
                 "problem_statement": problem_statement,
-                "working_directory": os.path.join(AGENT_WORKING_DIR, repo),
+                "repo": repo,
                 "file_tree": files_in_repo,
             },
         )
@@ -261,7 +259,7 @@ TOOLS = [
         parameters={
             "path": ToolParamDefinition(
                 param_type="string",
-                description="Absolute path to a directory, e.g. `/workspace/django`. If referencing a file, will return the name of the file.",
+                description="Path to a directory. E.g., `src/` or `src/example` If referencing a file, will return the name of the file.",
                 required=True,
             )
         },
@@ -272,7 +270,7 @@ TOOLS = [
         parameters={
             "path": ToolParamDefinition(
                 param_type="string",
-                description="Absolute path to file or directory, e.g. `/workspace/django/file.py` or `/workspace/django`.",
+                description="Path to file, e.g. `src/file.py` or `src/example/file.py`.",
                 required=True,
             ),
             "new_str": ToolParamDefinition(
@@ -293,7 +291,7 @@ TOOLS = [
         parameters={
             "path": ToolParamDefinition(
                 param_type="string",
-                description="The absolute path to the file to view, e.g. `/workspace/django/file.py` or `/workspace/django`.",
+                description="Path to file, e.g. `src/file.py` or `src/example/file.py`.",
                 required=True,
             )
         },
