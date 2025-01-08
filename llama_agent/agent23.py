@@ -122,7 +122,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
         )
 
         files_in_repo = "\n".join(
-            list_files_in_repo(os.path.join(SANDBOX_DIR, repo), depth=2)
+            list_files_in_repo(os.path.join(SANDBOX_DIR, repo), depth=1)
         )
         return PromptTemplate(
             template_str.lstrip("\n"),
