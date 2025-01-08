@@ -71,7 +71,7 @@ if eval_dir:
 
 print("Reverting patch...")
 os.system(f"cd {DJANGO_DIR} && git apply -R test.patch")
-print('\033[92mPatch reverted\033[0m')
+print('Patch reverted')
 
 
 if eval_dir:
