@@ -21,8 +21,24 @@ def main():
 
     setup_sandbox(df=df)
 
-    for row in df.iterrows():
-        print(row)
+    llama_stack_url = os.getenv("LLAMA_STACK_URL")
+    if not llama_stack_url:
+        raise ValueError("LLAMA_STACK_URL is not set in the environment variables")
+    client = LlamaStackClient(base_url=llama_stack_url)
+
+    for index, row in df.iterrows():
+        _, repo_name = row['repo'].split('/')
+        repo_path = os.path.join(SCRIPT_DIR, "sandbox", repo_name)
+        base_commit = row['base_commit']
+        print(f"Checking out commit {base_commit}")
+        run(f"cd {repo_path} && git checkout -f {base_commit}", shell=True, check=True)
+
+        try:
+            run_agent(client, "django", row['problem_statement'], eval_dir, row['instance_id'])
+        except Exception as e:
+            print(f"Agent exited with error: {e}")
+
+        validate_instance(row)
 
 
 def setup_sandbox(df):
@@ -52,6 +68,9 @@ def setup_sandbox(df):
         # Marker file to indicate that the sandbox is ready
         with open(os.path.join(SCRIPT_DIR, "sandbox", "ready.txt"), "w") as f:
             f.write("Marker file")
+
+def validate_instance(row):
+    print("TODO: validate instance")
 
 if __name__ == "__main__":
     main()
