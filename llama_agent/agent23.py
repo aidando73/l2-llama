@@ -247,6 +247,9 @@ def run_agent(
             os.path.join(eval_dir, "trajs", f"{instance_id}-prompt.txt"), "w"
         ) as f:
             f.write(message)
+    else:
+        with open("prompt.txt", "w") as f:
+            f.write(message)
 
 
 TOOLS = [
