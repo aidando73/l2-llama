@@ -18,3 +18,7 @@ if len(sys.argv) == 1:
 
 df = pd.read_parquet('test_data8.parquet')
 
+
+for index, row in df.iterrows():
+    instance_id = row['instance_id']
+    print(instance_id)
