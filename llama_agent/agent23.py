@@ -48,10 +48,10 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
 
             Your task is to solve the user's problem through analysis and appropriate function/tool calls.
 
-            Please follow this protocol:
+            You can perform only one of the following steps at a time:
             1. ANALYZE: 
             - Explain what you understand about the current state
-            - Review any previous tool calls
+            - Review the previous tool call (if any)
             - Describe the next steps that are needed to solve the problem
 
             2. EXECUTE:
@@ -93,20 +93,17 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             {% endfor %}
             Return function calls in JSON format.
 
-            For each step, structure your response as:
+            Structure your response as:
             <|start_header_id|>assistant<|end_header_id|>
 
             ANALYZE:
-            [Your analysis here]<|eot_id|><start_header_id|>assistant<|end_header_id|>
+            [Your analysis here]<|eot_id|>
+
+            or:
+            <|start_header_id|>assistant<|end_header_id|>
 
             EXECUTE:
-            [Function call in JSON format]<|eot_id|><start_header_id|>tool<|end_header_id|>
-            Executing tool call: [Function call in JSON format]
-            Result: [Result of the tool call]
-            <|eot_id|><start_header_id|>assistant<|end_header_id|>
-
-            REVIEW:
-            [Verification steps and results]<|eot_id|><start_header_id|>assistant<|end_header_id|>
+            [Function call in JSON format]<|eot_id|>
             """
         )
         return PromptTemplate(
