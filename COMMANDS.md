@@ -122,7 +122,7 @@ source ~/miniconda3/bin/activate ./env
 # If reattaching
 screen -r agent-eval
 
-eval_dir=$(realpath evals/v22.3) && \
+eval_dir=$(realpath evals/v23) && \
 mkdir -p $eval_dir && \
 python eval7.py $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
