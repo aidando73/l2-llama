@@ -111,7 +111,29 @@ def setup_sandbox(df):
 
 
 def validate_instance(row):
-    print("TODO: validate instance")
+    repo_name = row["repo"].split("/")[-1]
+    test_patch = row["test_patch"]
+    with open(os.path.join(SCRIPT_DIR, "sandbox", repo_name, "test.patch"), "w") as f:
+        f.write(test_patch)
+    
+    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git apply test.patch", shell=True, check=True)
+
+    if row["repo"] == "django/django":
+        if row["version"] == "4.0":
+            environment = "env_3_8"
+        elif row["version"] in ["4.1", "4.2"]:
+            environment = "env_3_9"
+        elif row["version"] == "5.0":
+            environment = "env_3_11"
+    else:
+        # Sympy uses python 3.9
+        environment = "env_3_9"
+    
+    diff_pat = r"diff --git a/.* b/(.*)"
+    test_patch = row['test_patch']
+    directives = re.findall(diff_pat, test_patch)
+
+    
 
 
 if __name__ == "__main__":
