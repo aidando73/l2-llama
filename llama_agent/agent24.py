@@ -221,8 +221,8 @@ def run_agent(
 
             try:
                 # Custom edit_file tool call
-                # We don't use the tool call format for old and new content becuase the model struggles with it
-                # Since you need to escape newlines and double quotes, it's easier to just prompt for the old and new content
+                # We don't use the tool call format for old and new content becuase Llama struggles with it
+                # Llama needs to escape newlines and double quotes, it's easier to just prompt for the old and new content
                 if tool_name == "edit_file":
                     if (error := validate_param_exists("path", tool_params)
                         or validate_path_in_sandbox(repo, tool_params["path"])
@@ -233,10 +233,32 @@ def run_agent(
                         result, result_msg = ("error", error)
                     else:
                         path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
-                        with open(f"{path}", "r") as f:
-                            old_file_content = f.read()
-                        
-                        
+
+                        # Prompt for old content
+                        message += chat_message("tool", "Please provide the old content to replace. Please format it in ```\nCODE\n``` format.")
+                        message += "<|eot_id|>"
+                        message += header("assistant")
+                        response = client.inference.completion(
+                            model_id=MODEL_ID,
+                            content=message,
+                        )
+                        message += response.content
+                        old_content = response.content
+                        message += "<|eot_id|>"
+                        message += header("assistant")
+
+                        # Prompt for new content
+                        message += chat_message("tool", "Please provide the new content to replace the old content with. Please format it in ```\nCODE\n``` format.")
+                        response = client.inference.completion(
+                            model_id=MODEL_ID,
+                            content=message,
+                        )
+                        message += response.content
+                        message += "<|eot_id|>"
+                        new_content = response.content
+
+                        print(f"Old content: {old_content}")
+                        print(f"New content: {new_content}")
 
                         # Get diff between old and new content
                         diff = list(
