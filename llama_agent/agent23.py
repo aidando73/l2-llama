@@ -41,7 +41,7 @@ formatter = ChatFormat(tokenizer)
 
 
 class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
-    def gen(self, custom_tools: list[ToolDefinition], repo: str) -> str:
+    def gen(self, problem_statement: str, repo: str, custom_tools: list[ToolDefinition]) -> str:
         template_str = textwrap.dedent(
             """
             <|begin_of_text|><|start_header_id|>system<|end_header_id|>
@@ -132,6 +132,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             template_str.lstrip("\n"),
             {
                 "custom_tools": [t.model_dump() for t in custom_tools],
+                "problem_statement": problem_statement,
                 "working_directory": os.path.join(AGENT_WORKING_DIR, repo),
                 "file_tree": files_in_repo,
             },
