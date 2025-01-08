@@ -237,13 +237,16 @@ def run_agent(
                         # Prompt for old content
                         message += chat_message("tool", "Please provide the old content to replace. Please format it in ```\nCODE\n``` format.")
                         message += "<|eot_id|>"
+                        print(f"Input tokens: {token_count(message)}")
+                        print("OLD_CONTENT: ")
                         message += header("assistant")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
                             content=message,
                         )
                         message += response.content
-                        old_content = response.content
+                        old_content = strip_code_block(response.content)
+                        print(blue(old_content))
                         message += "<|eot_id|>"
                         message += header("assistant")
 
@@ -251,22 +254,27 @@ def run_agent(
                         message += chat_message("tool", "Please provide the new content to replace the old content with. Please format it in ```\nCODE\n``` format.")
                         message += "<|eot_id|>"
                         message += header("assistant")
+                        print(f"Input tokens: {token_count(message)}")
+                        print("NEW_CONTENT: ")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
                             content=message,
                         )
                         message += response.content
-                        new_content = response.content
+                        new_content = strip_code_block(response.content)
+                        print(blue(new_content))
                         message += "<|eot_id|>"
 
-                        print(f"Old content: {old_content}")
-                        print(f"New content: {new_content}")
-
+                        with open(path, "r") as f:
+                            old_file_content = f.read()
+                        new_file_content = old_file_content.replace(old_content, new_content)
+                        with open(path, "w") as f:
+                            f.write(new_file_content)
                         # Get diff between old and new content
                         diff = list(
                             difflib.unified_diff(
                                 old_file_content.splitlines(keepends=True),
-                                new_content.splitlines(keepends=True),
+                                new_file_content.splitlines(keepends=True),
                                 fromfile="before",
                                 tofile="after",
                             )
@@ -307,6 +315,24 @@ def run_agent(
         with open("prompt.txt", "w") as f:
             f.write(message)
 
+
+def strip_code_block(content: str) -> str:
+    # Strip out leading backticks if any
+    content = content.strip()
+    if "```" not in content:
+        return content
+    
+    # Strip out leading backticks
+    backticks = re.search(r"```.*\n", content)
+    if backticks:
+        content = content[backticks.end():]
+
+    # Strip out trailing backticks
+    backticks = re.search(r"\n```", content)
+    if backticks:
+        content = content[:backticks.start()]
+
+    return content
 
 TOOLS = [
     ToolDefinition(

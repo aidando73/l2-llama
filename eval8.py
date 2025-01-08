@@ -31,6 +31,8 @@ def main():
 
     df = pd.read_parquet("test_data8.parquet")
 
+    setup_sandbox(df=df)
+
     num_instances = args.num_instances
     if num_instances == None and args.eval_dir == None:
         num_instances = 1
@@ -41,7 +43,6 @@ def main():
     if args.eval_dir:
         os.makedirs(os.path.join(args.eval_dir, "trajs"), exist_ok=True)
 
-    setup_sandbox(df=df)
 
     client = LlamaStackClient(base_url="http://localhost:5000")
 
