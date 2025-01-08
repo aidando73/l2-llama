@@ -179,11 +179,19 @@ def run_agent(
             model_id=MODEL_ID,
             content=message,
         )
-
-        message += response.content
+        if "EXECUTE:" in response.content:
+            # Sometimes the agent will respond with the EXECUTE statement
+            # we want it to respond in separate turns so it's easier to pre-empt the model
+            # and parse the tool call
+            # print("DEBUG", response.content)
+            analyse_statement = response.content[:response.content.find("EXECUTE:")]
+            analyse_statement = analyse_statement.rstrip()
+        else:
+            analyse_statement = response.content
+        message += analyse_statement
         message += f"<|eot_id|>"
 
-        print(f"ANALYSE: {magenta(response.content)}")
+        print(f"ANALYSE: {magenta(analyse_statement)}")
 
         # EXECUTE
         message += header("assistant")
