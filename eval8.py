@@ -8,6 +8,7 @@ import pandas as pd
 from subprocess import run
 from argparse import ArgumentParser
 import re
+import datetime
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -36,6 +37,9 @@ def main():
 
     if num_instances:
         df = df.sample(n=num_instances)
+    
+    if args.eval_dir:
+        os.makedirs(os.path.join(args.eval_dir, "trajs"), exist_ok=True)
 
     setup_sandbox(df=df)
 
@@ -60,7 +64,7 @@ def main():
         except Exception as e:
             print(f"Agent exited with error: {e}")
 
-        validate_instance(row)
+        validate_instance(row, eval_dir=args.eval_dir)
 
 
 def setup_sandbox(df):
@@ -147,20 +151,20 @@ def validate_instance(row, eval_dir = None):
 
     if repo_name == "django/django":
         cmd = run(
-            f"cd {SCRIPT_DIR}/sandbox/{repo_name} && "
+            f"bash -c 'cd {SCRIPT_DIR}/sandbox/{repo_name} && "
             f"source ~/miniconda3/bin/activate && "
             f"conda activate ./{environment} && "
-            f"./tests/runtests.py --settings=test_sqlite --parallel 1 {' '.join(directives)}",
+            f"./tests/runtests.py --settings=test_sqlite --parallel 1 {' '.join(directives)}'",
             shell=True
         )
     else:
         cmd = run(
-            f"cd {SCRIPT_DIR}/sandbox/{repo_name} && "
+            f"bash -c 'cd {SCRIPT_DIR}/sandbox/{repo_name} && "
             f"source ~/miniconda3/bin/activate && "
             f"conda activate ./{environment} && "
             f"pip install mpmath==1.3.0 flake8-comprehensions && "
             f"python -m pip install -e . && "
-            f"PYTHONWARNINGS='ignore::UserWarning,ignore::SyntaxWarning' bin/test -C --verbose {' '.join(directives)}",
+            f"PYTHONWARNINGS='ignore::UserWarning,ignore::SyntaxWarning' bin/test -C --verbose {' '.join(directives)}'",
             shell=True
         )
 
@@ -174,13 +178,20 @@ def validate_instance(row, eval_dir = None):
     if eval_dir:
         with open(os.path.join(eval_dir, "eval.log"), 'a') as f:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            f.write(f"{sample_row['instance_id']},{result},{timestamp}\n")
+            f.write(f"{row['instance_id']},{result},{timestamp}\n")
     
-    print("Reverting patch...")
+    print("Reverting test patch...")
     run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git apply -R test.patch", shell=True, check=True)
     os.remove(os.path.join(SCRIPT_DIR, "sandbox", repo_name, "test.patch"))
-    print('Patch reverted')
+    print('Test patch reverted')
 
+    if eval_dir:
+        # Collect any remaining changes into a patch file
+        patch_file = os.path.join(eval_dir, "trajs", f"{row['instance_id']}.patch")
+    else:
+        patch_file = os.path.join(SCRIPT_DIR, f"current_instance.patch")
+
+    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git diff > {patch_file}", shell=True, check=True)
 
 if __name__ == "__main__":
     main()
