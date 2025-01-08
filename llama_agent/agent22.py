@@ -44,22 +44,6 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
     def gen(self, custom_tools: list[ToolDefinition]) -> str:
         template_str = textwrap.dedent(
             """
-            You are an expert software engineer. Your task is to solve the user's problem by making appropriate function/tool calls.
-
-            Your task is to solve the user's problem through analysis and appropriate function/tool calls.
-
-            Please follow this protocol:
-            1. ANALYZE: 
-            - Explain what you understand about the current state
-            - Describe the next steps that are needed to solve the problem
-
-            2. EXECUTE:
-            - Make the appropriate function call(s)
-            - Format calls in proper JSON
-
-            3. REVIEW:
-            - Review the results of the function/tool call
-
             Solve the users problem by making one or more function/tool calls.
             Here is a list of functions in JSON format:
             {% for t in custom_tools -%}
@@ -94,21 +78,6 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             }
             {% endfor %}
             Return function calls in JSON format.
-
-            For each step, structure your response as:
-            <|start_header_id|>assistant<|end_header_id|>
-
-            ANALYZE:
-            [Your analysis here]<|eot_id|><start_header_id|>assistant<|end_header_id|>
-
-            EXECUTE:
-            [Function call in JSON format]<|eot_id|><start_header_id|>tool<|end_header_id|>
-            Executing tool call: [Function call in JSON format]
-            Result: [Result of the tool call]
-            <|eot_id|><start_header_id|>assistant<|end_header_id|>
-
-            REVIEW:
-            [Verification steps and results]<|eot_id|><start_header_id|>assistant<|end_header_id|>
             """
         )
         return PromptTemplate(
