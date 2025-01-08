@@ -122,7 +122,6 @@ def validate_instance(row, eval_dir = None):
     with open(os.path.join(SCRIPT_DIR, "sandbox", repo_name, "test.patch"), "w") as f:
         f.write(test_patch)
     
-    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git apply test.patch", shell=True, check=True)
 
     if row["repo"] == "django/django":
         if row["version"] == "4.0":
@@ -138,6 +137,12 @@ def validate_instance(row, eval_dir = None):
     diff_pat = r"diff --git a/.* b/(.*)"
     test_patch = row['test_patch']
     directives = re.findall(diff_pat, test_patch)
+
+    # In some cases the agent may of made a change to the test file,
+    # so we need to revert it before running the tests
+    base_commit = row["base_commit"]
+    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git checkout {base_commit} -- {' '.join(directives)}", shell=True, check=True)
+    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git apply test.patch", shell=True, check=True)
 
     # For Django tests, remove extension + "tests/" prefix and convert slashes to dots (module referencing)
     if repo_name == "django/django":
