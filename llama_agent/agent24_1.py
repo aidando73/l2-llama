@@ -267,24 +267,26 @@ def run_agent(
 
                         with open(path, "r") as f:
                             old_file_content = f.read()
-    
-                        new_file_content = replace_content(old_file_content, old_content, new_content)
 
-                        with open(path, "w") as f:
-                            f.write(new_file_content)
-                        # Get diff between old and new content
-                        diff = list(
-                            difflib.unified_diff(
-                                old_file_content.splitlines(keepends=True),
-                                new_file_content.splitlines(keepends=True),
-                                fromfile="before",
-                                tofile="after",
+                        try:    
+                            new_file_content = replace_content(old_file_content, old_content, new_content)
+                            with open(path, "w") as f:
+                                f.write(new_file_content)
+                            # Get diff between old and new content
+                            diff = list(
+                                difflib.unified_diff(
+                                    old_file_content.splitlines(keepends=True),
+                                    new_file_content.splitlines(keepends=True),
+                                    fromfile="before",
+                                    tofile="after",
+                                )
                             )
-                        )
-                        if len(diff) == 0:
-                            result, result_msg = ("error", "ERROR - No changes made to file")
-                        else:
-                            result, result_msg = ("success", "File successfully updated\n" + "\n".join(diff))
+                            if len(diff) == 0:
+                                result, result_msg = ("error", "ERROR - No changes made to file")
+                            else:
+                                result, result_msg = ("success", "File successfully updated\n" + "\n".join(diff))
+                        except AssertionError as e:
+                            result, result_msg = ("error", f"ERROR - {e}")
                 else:
                     result, result_msg = execute_tool_call(tool_name, tool_params, repo)
             except Exception as e:
@@ -627,6 +629,9 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
     Remove all leading whitespace from old_content and new_content
     And then add it back in at the end
     """
+    if dedent(old_content) == dedent(new_content):
+        raise AssertionError("OLD_CONTENT and NEW_CONTENT are identical. File unchanged.")
+
     from math import inf
     def get_common_indentation(lines: list[str]) -> str:
         """
@@ -673,4 +678,4 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
                 res += indent_char * common_indentation + line
             return "".join(old_file_content_lines[:i]) + res + "".join(old_file_content_lines[i + m:])
 
-    return old_file_content
+    raise AssertionError("OLD_CONTENT not found in file")
