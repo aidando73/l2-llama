@@ -272,6 +272,7 @@ def run_agent(
                         new_content = strip_code_block(response.content)
                         print(blue(new_content))
                         message += "<|eot_id|>"
+                        message += header("tool")
 
                         with open(path, "r") as f:
                             old_file_content = f.read()
