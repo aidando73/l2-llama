@@ -251,7 +251,7 @@ def run_agent(
                         message += header("assistant")
 
                         # Prompt for new content
-                        message += chat_message("tool", "Please provide the new content to replace the old content with. Please format it in ```\nCODE\n``` format.")
+                        message += chat_message("tool", "Please provide the new content to replace the old content with. Please format it between triple backticks.")
                         message += "<|eot_id|>"
                         message += header("assistant")
                         print(f"Input tokens: {token_count(message)}")
