@@ -235,7 +235,11 @@ def run_agent(
                         path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
 
                         # Prompt for old content
-                        message += chat_message("tool", "Please provide the old content to replace. Please format it in ```\nCODE\n``` format.")
+                        message += chat_message("tool", (
+                            "Please provide the old content to replace."
+                            "Please format it it between triple backticks."
+                            "E.g., ```\nprint('Hello, world!')\n```"
+                        ))
                         message += "<|eot_id|>"
                         print(f"Input tokens: {token_count(message)}")
                         print("OLD_CONTENT: ")
@@ -251,7 +255,11 @@ def run_agent(
                         message += header("assistant")
 
                         # Prompt for new content
-                        message += chat_message("tool", "Please provide the new content to replace the old content with. Please format it between triple backticks.")
+                        message += chat_message("tool", (
+                            "Please provide the new content to replace the old content with."
+                            "Please format it between triple backticks."
+                            "E.g., ```\nprint('Hello, world!')\n```"
+                        ))
                         message += "<|eot_id|>"
                         message += header("assistant")
                         print(f"Input tokens: {token_count(message)}")
