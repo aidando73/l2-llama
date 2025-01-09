@@ -640,7 +640,6 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
         for line in lines:
             # Assume tabs or spaces only
             if whitespace := re.match(r'^[ \t]+', line):
-                print(len(whitespace.group(0)))
                 if indent_char is None:
                     # Just get the first whitespace character we encounter
                     indent_char = whitespace.group(0)[0]
