@@ -154,7 +154,7 @@ screen -r agent-eval
 
 # 1. Check that the changes are in the agent
 # 2. Run the eval
-eval_dir=$(realpath evals/v24.3-slimmed-edit-prompt) && \
+eval_dir=$(realpath evals/v24.2-tool-errors) && \
 mkdir -p $eval_dir && \
 python eval8.py --eval_dir $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
