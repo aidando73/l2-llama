@@ -135,6 +135,10 @@ log_file=$(date +%Y-%m-%d_%H-%M).log && \
 bash -c "python -u setup7.py && python -u run8.py && python -u validate7.py"  2>&1 | \
 stdbuf -o0 tee -a logs/$log_file
 
+log_file=$(date +%Y-%m-%d_%H-%M).log && \
+python -u eval8.py  2>&1 | \
+stdbuf -o0 tee -a logs/$log_file
+
 # 1. Check that the changes are in the agent
 # 2. Run the eval
 eval_dir=$(realpath evals/v24-attempt-2) && \
