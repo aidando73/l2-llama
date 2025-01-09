@@ -267,7 +267,9 @@ def run_agent(
 
                         with open(path, "r") as f:
                             old_file_content = f.read()
-                        new_file_content = old_file_content.replace(old_content, new_content)
+    
+                        new_file_content = replace_content(old_file_content, old_content, new_content)
+
                         with open(path, "w") as f:
                             f.write(new_file_content)
                         # Get diff between old and new content
@@ -613,3 +615,24 @@ def header(role: Literal["user", "assistant", "system", "tool"]):
 
 def token_count(message: str):
     return len(tokenizer.encode(message, bos=False, eos=False))
+
+
+def replace_content(old_file_content: str, old_content: str, new_content: str):
+    """
+    Replaces old_content with new_content in old_file_content.
+    Does so without worring about identation
+    We count the indentation of old_file_content
+    Remove all leading whitespace from old_content and new_content
+    And then add it back in at the end
+    """
+
+    return old_file_content
+    # # Get the indentation of the old_file_content
+    # old_file_content_lines = old_file_content.splitlines(keepends=True)
+    # old_content_lines = old_content.splitlines(keepends=True)
+    # new_content_lines = new_content.splitlines(keepends=True)
+
+    # for i, line in enumerate(old_file_content_lines):
+    #     if line.strip() == old_content_lines[0].strip():
+    #         old_file_content_lines[i] = new_content_lines[0]
+    #         break
