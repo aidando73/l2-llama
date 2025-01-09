@@ -155,6 +155,7 @@ def run_agent(
         .render()
     )
 
+    edit_made = False
     finished = False
     for i in range(ITERATIONS):
         print("\n")
@@ -295,9 +296,15 @@ def run_agent(
                             if len(diff) == 0:
                                 result, result_msg = ("error", "ERROR - No changes made to file")
                             else:
+                                edit_made = True
                                 result, result_msg = ("success", "File successfully updated\n" + "\n".join(diff))
                         except AssertionError as e:
                             result, result_msg = ("error", f"ERROR - {e}")
+                elif tool_name == "finish":
+                    if not edit_made:
+                        result, result_msg = ("error", "ERROR - No changes made to the codebase. Please make changes to the codebase before calling this function.")
+                    else:
+                        result, result_msg = ("success", "Task marked as finished")
                 else:
                     result, result_msg = execute_tool_call(tool_name, tool_params, repo)
             except Exception as e:
@@ -385,7 +392,8 @@ TOOLS = [
     ),
     ToolDefinition(
         tool_name="finish",
-        description="If you have solved the problem, you can call this function to finish the task.",
+        description=("If you have solved the problem, call this function to finish the task."
+                      "Note that you must make changes to the codebase to finish the task, otherwise this function will fail."),
         parameters={},
     ),
 ]
@@ -433,9 +441,6 @@ def execute_tool_call(
         with open(f"{path}", "r") as f:
             file_content = f.read()
         return ("success", file_content)
-
-    elif tool_name == "finish":
-        return ("success", "Task marked as finished")
 
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
