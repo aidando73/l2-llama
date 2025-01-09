@@ -268,7 +268,7 @@ def run_agent(
                         with open(path, "r") as f:
                             old_file_content = f.read()
     
-                        new_file_content = old_file_content.replace(old_content, new_content)
+                        new_file_content = replace_content(old_file_content, old_content, new_content)
 
                         with open(path, "w") as f:
                             f.write(new_file_content)
@@ -616,3 +616,62 @@ def header(role: Literal["user", "assistant", "system", "tool"]):
 def token_count(message: str):
     return len(tokenizer.encode(message, bos=False, eos=False))
 
+
+# Very hacky implementation
+# But we'll see how well it works
+def replace_content(old_file_content: str, old_content: str, new_content: str):
+    """
+    Replaces old_content with new_content in old_file_content.
+    Does so without worring about identation
+    We count the indentation of old_file_content
+    Remove all leading whitespace from old_content and new_content
+    And then add it back in at the end
+    """
+    from math import inf
+    def get_common_indentation(lines: list[str]) -> str:
+        """
+        Returns:
+            Tuple[int, Optional[str]]:
+                - indent_char (Optional[str]): The character type of the indentation, either " " or "\t" or '' if no whitespace
+                - common_indentation (int): The common indentation of the lines
+        """
+        common_indentation = inf
+        indent_char = None
+        for line in lines:
+            # Assume tabs or spaces only
+            if whitespace := re.match(r'^[ \t]+', line):
+                print(len(whitespace.group(0)))
+                if indent_char is None:
+                    # Just get the first whitespace character we encounter
+                    indent_char = whitespace.group(0)[0]
+                if len(whitespace.group(0)) < common_indentation:
+                    common_indentation = len(whitespace.group(0))
+            else:
+                # If we encounter a line without whitespace, then there's no whitespace to remove
+                return ('', 0)
+        return indent_char, common_indentation
+
+    old_file_content_lines = old_file_content.splitlines(keepends=True)
+    old_content_lines = old_content.splitlines(keepends=True)
+
+    if len(old_content_lines) > len(old_file_content_lines):
+        return old_file_content
+
+    m = len(old_content_lines)
+    for i in range(len(old_file_content_lines) - m + 1):
+        lines = old_file_content_lines[i:i + m]
+        indent_char, common_indentation = get_common_indentation(lines)
+
+        # Check if the old content is in the dedented content
+        content_dedented = dedent("".join(lines))
+        old_content_dedented = dedent(old_content)
+        if old_content_dedented in content_dedented:
+            new_file_dedented = dedent(new_content)
+            content_dedented = content_dedented.replace(old_content_dedented, new_file_dedented)
+            content_dedented = content_dedented.splitlines(keepends=True)
+            res = ""
+            for line in content_dedented:
+                res += indent_char * common_indentation + line
+            return "".join(old_file_content_lines[:i]) + res + "".join(old_file_content_lines[i + m:])
+
+    return old_file_content
