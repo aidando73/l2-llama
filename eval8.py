@@ -160,6 +160,7 @@ def validate_instance(row, eval_dir = None):
             f"bash -c 'cd {SCRIPT_DIR}/sandbox/{repo_name} && "
             f"source ~/miniconda3/bin/activate && "
             f"conda activate ./{environment} && "
+            f"pip install -e . && "
             f"./tests/runtests.py --settings=test_sqlite --parallel 1 {' '.join(directives)}'",
             shell=True
         )
