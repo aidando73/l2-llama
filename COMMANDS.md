@@ -116,11 +116,7 @@ eval_dir=$(realpath swe-evals)/v17.5 \
 
 # New screen
 sudo apt install screen
-screen -S agent-eval
-source ~/miniconda3/bin/activate ./env
 
-# If reattaching
-screen -r agent-eval
 
 # 1. Check that the changes are in the agent
 # 2. Run the eval
@@ -139,12 +135,30 @@ log_file=$(date +%Y-%m-%d_%H-%M).log && \
 python -u eval8.py  2>&1 | \
 stdbuf -o0 tee -a logs/$log_file
 
+
+# Llama stack setup
+cd ~/dev/llama-stack && screen -S llama-stack
+
+# Fireworks build from source
+source ~/miniconda3/bin/activate ./env \
+&& pip install -e . \
+&& llama stack build --config distributions/fireworks/build.yaml --image-type conda \
+&& stdbuf --output=L llama stack run distributions/fireworks/run.yaml \
+  --port 5000 | tee -a llama-stack.log
+
+screen -S agent-eval
+source ~/miniconda3/bin/activate ./env
+
+# If reattaching
+screen -r agent-eval
+
 # 1. Check that the changes are in the agent
 # 2. Run the eval
-eval_dir=$(realpath evals/v24-attempt-2) && \
+eval_dir=$(realpath evals/v24.3-slimmed-edit-prompt) && \
 mkdir -p $eval_dir && \
 python eval8.py --eval_dir $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
+
 ```
 
 Dependencies:
