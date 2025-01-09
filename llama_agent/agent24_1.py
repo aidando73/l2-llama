@@ -248,8 +248,10 @@ def run_agent(
                             model_id=MODEL_ID,
                             content=message,
                         )
-                        message += response.content
                         old_content = strip_code_block(response.content)
+                        # Sometimes the agent will add additional text or no backticks
+                        # So re-introduce the backticks to provide it a better example
+                        message += f"```\n{old_content}\n```"
                         print(blue(old_content))
                         message += "<|eot_id|>"
                         message += header("assistant")
@@ -268,8 +270,8 @@ def run_agent(
                             model_id=MODEL_ID,
                             content=message,
                         )
-                        message += response.content
                         new_content = strip_code_block(response.content)
+                        message += f"```\n{new_content}\n```"
                         print(blue(new_content))
                         message += "<|eot_id|>"
                         message += header("tool")
@@ -639,7 +641,7 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
     And then add it back in at the end
     """
     if dedent(old_content) == dedent(new_content):
-        raise AssertionError("OLD_CONTENT and NEW_CONTENT are identical. File unchanged.")
+        raise AssertionError("Old content and new content are identical. File unchanged.")
 
     from math import inf
     def get_common_indentation(lines: list[str]) -> str:
@@ -687,4 +689,4 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
                 res += indent_char * common_indentation + line
             return "".join(old_file_content_lines[:i]) + res + "".join(old_file_content_lines[i + m:])
 
-    raise AssertionError("OLD_CONTENT not found in file")
+    raise AssertionError("Old content not found in file")
