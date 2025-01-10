@@ -251,11 +251,9 @@ def run_agent(
 
                         # Prompt for old content
                         message += chat_message("tool", (
-                            "Please provide the old content to replace. "
-                            "Ensure that the old content is an exact match of the content in the file. "
-                            "If the content is not an exact match, this command will fail. "
-                            "Please format it between triple backticks. "
-                            "E.g., ```\nprint('Hello, world!')\n```\n"
+                            "Please provide the old content to replace."
+                            "Please format it it between triple backticks."
+                            "E.g., ```\nprint('Hello, world!')\n```"
                         ))
                         message += "<|eot_id|>"
                         print(f"Input tokens: {token_count(message)}")
@@ -670,4 +668,4 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
                 res += indent_char * common_indentation + line
             return "".join(old_file_content_lines[:i]) + res + "".join(old_file_content_lines[i + m:])
 
-    raise AssertionError("Old content not found in file. Please ensure the old content is an exact match of the content in the file.")
+    raise AssertionError("Old content not found in file")
