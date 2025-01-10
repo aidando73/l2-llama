@@ -131,6 +131,9 @@ def setup_sandbox(worker_id):
                 f"git clone https://github.com/{repo}.git {repo_path}",
                 shell=True,
                 check=True,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                bufsize=1,
             )
 
     if not os.path.exists(os.path.join(worker_sandbox_dir, "ready.txt")):
@@ -141,16 +144,25 @@ def setup_sandbox(worker_id):
             f"conda create -y -p {worker_sandbox_dir}/django/env_3_8 python=3.8",
             shell=True,
             check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            bufsize=1,
         )
         run(
             f"conda create -y -p {worker_sandbox_dir}/django/env_3_9 python=3.9",
             shell=True,
             check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            bufsize=1,
         )
         run(
             f"conda create -y -p {worker_sandbox_dir}/django/env_3_11 python=3.11",
             shell=True,
             check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            bufsize=1,
         )
 
         # Sympy uses python 3.9
@@ -158,6 +170,9 @@ def setup_sandbox(worker_id):
             f"conda create -y -p {worker_sandbox_dir}/sympy/env_3_9 python=3.9 mpmath flake8",
             shell=True,
             check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            bufsize=1,
         )
 
         # Marker file to indicate that the sandbox is ready
