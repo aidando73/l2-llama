@@ -340,14 +340,13 @@ def run_agent(
                         {problem_statement}
                         </problem_statement>
 
-                        You have viewed the following file:
+                        You have viewed the following file which may or may not be relevant to the problem
                         <file_content>
                         {file_content}
                         </file_content>
 
-                        This file may or may not be relevant to the problem statement. \
-                        Please determine whether the file is relevant to the problem statement. \
-                        If it is, please extract relevant snippets from the file and annotate them with key insights relevant to the problem statement. \
+                        Please determine whether the file is relevant to the problem. \
+                        If it is, please extract relevant snippets from the file and annotate them with key insights relevant to solving the problem. \
                         If the file is not relevant, please do not include any information from the file.
                     """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
                     temp_message += "<|eot_id|>"
