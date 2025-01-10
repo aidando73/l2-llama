@@ -109,9 +109,39 @@ def worker_process(args):
     setup_sandbox(worker_id)
     client = LlamaStackClient(base_url="http://localhost:5000")
 
+    sandbox_dir = os.path.join(SCRIPT_DIR, "sandbox", f"worker_{worker_id}")
+
     while not queue.empty():
         row = queue.get()
         print(f"Worker {worker_id} processing instance: ", row["instance_id"])
+        _, repo_name = row["repo"].split("/")
+        repo_path = os.path.join(sandbox_dir, repo_name)
+
+        # Checkout base commit
+        base_commit = row["base_commit"]
+        print(f"Checking out commit {base_commit}")
+        run(
+            f"cd {repo_path} && git checkout -f {base_commit}",
+            shell=True,
+            check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            bufsize=1,
+        )
+
+        try:
+            run_agent(
+                client=client,
+                repo=repo_name,
+                problem_statement=row["problem_statement"],
+                eval_dir=eval_dir,
+                instance_id=row["instance_id"],
+            )
+        except Exception as e:
+            print(f"Agent exited with error: {e}")
+            traceback.print_exc()
+
+        validate_instance(row, sandbox_dir, eval_dir=eval_dir)
 
 
 def setup_sandbox(worker_id):
