@@ -162,7 +162,7 @@ stdbuf -o0 tee -a $eval_dir/harness.log
 
 eval_dir=$(realpath swe-evals)/v25.1 \
     && mkdir -p $eval_dir \
-    && python swe-eval9.py $eval_dir \
+    && python -u swe-eval9.py $eval_dir \
     | tee -a $eval_dir/harness.log
 ```
 
