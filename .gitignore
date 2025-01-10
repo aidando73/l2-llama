@@ -10,3 +10,4 @@ current_instance.patch
 logs/
 prompt.txt
 edit_file-prompt.txt
+swe_evals/
