@@ -21,8 +21,14 @@ eval_dir = sys.argv[1]
 NUM_INSTANCES = float('inf')
 
 # Check if all_preds.jsonl already exists
+already_processed = set()
 if os.path.exists(os.path.join(eval_dir, "all_preds.jsonl")):
-    raise FileExistsError(f"Evaluation file {os.path.join(eval_dir, 'all_preds.jsonl')} already exists. Please delete it or use a different directory.")
+    with open(os.path.join(eval_dir, "all_preds.jsonl")) as f:
+        for line in f:
+            already_processed.add(json.loads(line)["instance_id"])
+
+print(f"Resuming progress. Already processed {len(already_processed)} instances")
+df = df[~df["instance_id"].isin(already_processed)]
 
 # Create eval directory if it doesn't exist
 os.makedirs(eval_dir, exist_ok=True)

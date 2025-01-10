@@ -160,7 +160,7 @@ python eval8.py --eval_dir $eval_dir  2>&1 | \
 stdbuf -o0 tee -a $eval_dir/harness.log
 
 
-eval_dir=$(realpath swe-evals)/v25.1 \
+eval_dir=$(realpath swe-evals)/v27-70B \
     && mkdir -p $eval_dir \
     && python -u swe-eval9.py $eval_dir \
     | tee -a $eval_dir/harness.log
