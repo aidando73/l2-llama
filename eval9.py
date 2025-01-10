@@ -10,6 +10,7 @@ from argparse import ArgumentParser
 import re
 import datetime
 import traceback
+import multiprocessing as mp
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -66,83 +67,90 @@ def main():
     job_queue = mp.Queue()
     for _, row in df.iterrows():
         job_queue.put(row)
+    
+    # Create a pool of workers
+    with mp.Pool(num_workers) as pool:
+        pool.map(process_instance, [(job_queue, i, args.eval_dir) for i in range(num_workers)])
 
-    for index, row in df.iterrows():
-        print(f"Running instance {row['instance_id']}")
-        _, repo_name = row["repo"].split("/")
-        repo_path = os.path.join(SCRIPT_DIR, "sandbox", repo_name)
-        base_commit = row["base_commit"]
-        print(f"Checking out commit {base_commit}")
-        run(f"cd {repo_path} && git checkout -f {base_commit}", shell=True, check=True)
+    # for index, row in df.iterrows():
+    #     print(f"Running instance {row['instance_id']}")
+    #     _, repo_name = row["repo"].split("/")
+    #     repo_path = os.path.join(SCRIPT_DIR, "sandbox", repo_name)
+    #     base_commit = row["base_commit"]
+    #     print(f"Checking out commit {base_commit}")
+    #     run(f"cd {repo_path} && git checkout -f {base_commit}", shell=True, check=True)
 
-        try:
-            run_agent(
-                client=client,
-                repo=repo_name,
-                problem_statement=row["problem_statement"],
-                eval_dir=args.eval_dir,
-                instance_id=row["instance_id"],
-            )
-        except Exception as e:
-            print(f"Agent exited with error: {e}")
-            traceback.print_exc()
+    #     try:
+    #         run_agent(
+    #             client=client,
+    #             repo=repo_name,
+    #             problem_statement=row["problem_statement"],
+    #             eval_dir=args.eval_dir,
+    #             instance_id=row["instance_id"],
+    #         )
+    #     except Exception as e:
+    #         print(f"Agent exited with error: {e}")
+    #         traceback.print_exc()
 
-        validate_instance(row, eval_dir=args.eval_dir)
+    #     validate_instance(row, eval_dir=args.eval_dir)
 
+def process_instance(queue, worker_id, eval_dir=None):
+    setup_sandbox(worker_id)
+    while not queue.empty():
+        row = queue.get()
+        print(f"Worker {worker_id} processing instance: ", row["instance_id"])
 
-def setup_sandbox(df, num_workers):
+def setup_sandbox(worker_id):
     # Create sandbox directory if it doesn't exist
     os.makedirs(os.path.join(SCRIPT_DIR, "sandbox"), exist_ok=True)
 
     # We want each worker to have it's own sandbox
-    for i in range(num_workers):
-        os.makedirs(os.path.join(SCRIPT_DIR, "sandbox", f"worker_{i}"), exist_ok=True)
+    worker_sandbox_dir = os.path.join(SCRIPT_DIR, "sandbox", f"worker_{worker_id}")
+    os.makedirs(worker_sandbox_dir, exist_ok=True)
 
     # Create repo directories inside sandbox if they don't exist
-    unique_repos = df["repo"].unique()
-    for worker_id in range(num_workers):
-        worker_sandbox_dir = os.path.join(SCRIPT_DIR, "sandbox", f"worker_{worker_id}")
-        for repo in unique_repos:
-            repo_name = repo.split("/")[-1]
-            repo_path = os.path.join(worker_sandbox_dir, repo_name)
-            if not os.path.exists(repo_path):
-                print(f"Cloning {repo} repository...")
-                run(
-                    f"git clone https://github.com/{repo}.git {repo_path}",
-                    shell=True,
-                    check=True,
-                )
-
-        if not os.path.exists(os.path.join(worker_sandbox_dir, "ready.txt")):
-            # Django 4.0 uses python 3.8
-            # Django 4.1 and 4.2 use python 3.9
-            # Django 5.0 uses python 3.11
+    unique_repos = ["sympy/sympy", "django/django"]
+    for repo in unique_repos:
+        repo_name = repo.split("/")[-1]
+        repo_path = os.path.join(worker_sandbox_dir, repo_name)
+        if not os.path.exists(repo_path):
+            print(f"Cloning {repo} repository...")
             run(
-                f"conda create -y -p {worker_sandbox_dir}/django/env_3_8 python=3.8",
-                shell=True,
-                check=True,
-            )
-            run(
-                f"conda create -y -p {worker_sandbox_dir}/django/env_3_9 python=3.9",
-                shell=True,
-                check=True,
-            )
-            run(
-                f"conda create -y -p {worker_sandbox_dir}/django/env_3_11 python=3.11",
+                f"git clone https://github.com/{repo}.git {repo_path}",
                 shell=True,
                 check=True,
             )
 
-            # Sympy uses python 3.9
-            run(
-                f"conda create -y -p {worker_sandbox_dir}/sympy/env_3_9 python=3.9 mpmath flake8",
-                shell=True,
-                check=True,
-            )
+    if not os.path.exists(os.path.join(worker_sandbox_dir, "ready.txt")):
+        # Django 4.0 uses python 3.8
+        # Django 4.1 and 4.2 use python 3.9
+        # Django 5.0 uses python 3.11
+        run(
+            f"conda create -y -p {worker_sandbox_dir}/django/env_3_8 python=3.8",
+            shell=True,
+            check=True,
+        )
+        run(
+            f"conda create -y -p {worker_sandbox_dir}/django/env_3_9 python=3.9",
+            shell=True,
+            check=True,
+        )
+        run(
+            f"conda create -y -p {worker_sandbox_dir}/django/env_3_11 python=3.11",
+            shell=True,
+            check=True,
+        )
 
-            # Marker file to indicate that the sandbox is ready
-            with open(os.path.join(worker_sandbox_dir, "ready.txt"), "w") as f:
-                f.write("Marker file")
+        # Sympy uses python 3.9
+        run(
+            f"conda create -y -p {worker_sandbox_dir}/sympy/env_3_9 python=3.9 mpmath flake8",
+            shell=True,
+            check=True,
+        )
+
+        # Marker file to indicate that the sandbox is ready
+        with open(os.path.join(worker_sandbox_dir, "ready.txt"), "w") as f:
+            f.write("Marker file")
 
 
 def validate_instance(row, eval_dir = None):
