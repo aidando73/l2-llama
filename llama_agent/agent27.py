@@ -656,4 +656,4 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
                 res += indent_char * common_indentation + line
             return "".join(old_file_content_lines[:i]) + res + "".join(old_file_content_lines[i + m:])
 
-    raise AssertionError("Old content not found in file")
+    raise AssertionError("Old content not found in file. Please ensure the old content is an exact match of the content in the file.")
