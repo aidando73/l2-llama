@@ -166,9 +166,9 @@ eval_dir=$(realpath swe-evals)/v25.1 \
     | tee -a $eval_dir/harness.log
 
 python -m swebench.harness.run_evaluation \
-    --predictions_path swe-evals/v25.1/all_preds.jsonl \
+    --predictions_path swe-evals/v27-70B/all_preds.jsonl \
     --max_workers 16 \
-    --run_id v25.1
+    --run_id v27-70B
 ```
 
 Dependencies:
