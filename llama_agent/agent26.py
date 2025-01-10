@@ -316,22 +316,33 @@ def run_agent(
 
                     # We ask the agent to only keep the relevant code from the file - to avoid long context
                     # Hypothesis: It performs poorly when keeping the entire file in context
-                    temp_message = message
-                    temp_message += "Result:\n"
-                    temp_message += "<file_content>\n"
-                    temp_message += file_content
-                    temp_message += "</file_content>\n"
-                    # temp_message += "You have a limited context window. Please keep only the relevant code from the file and nothing else."
-                    temp_message += "You have a limited context window. What are the most relevant sections of the file you'd like to keep within context?"
-                    temp_message += "<|eot_id|>"
+                    temp_message = "<|begin_of_text|>"
+                    temp_message += header("system")
+                    temp_message += dedent("""\
+                        You are an expert software engineer. You're working in a repository called {repo}.
+                        You were given the following problem statement:
 
+                        <problem_statement>
+                        {problem_statement}
+                        </problem_statement>
+
+                        You have viewed the following file:
+                        <file_content>
+                        {file_content}
+                        </file_content>
+
+                        But you have a limited context window. Please keep only the most relevant sections of the file and nothing else.
+                        Please do not include any other text in your response.
+                    """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
+                    temp_message += "<|eot_id|>"
                     temp_message += header("assistant")
+                    print(f"Input tokens: {token_count(temp_message)}")
                     response = client.inference.completion(
                         model_id=MODEL_ID,
                         content=temp_message,
                     )
 
-                    result_msg = "Result: File successfully viewed. Content you decided to keep within context:\n"
+                    result_msg = "File successfully viewed. You decided to keep within context:\n"
                     result_msg += response.content
                     result = "success"
                 elif tool_name == "finish":
