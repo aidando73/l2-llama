@@ -58,8 +58,6 @@ def main():
             print(f"Filtering out {len(ran_instances)} already ran instances")
             df = df[~df["instance_id"].isin(ran_instances)]
 
-
-    
     # Create a pool of workers
     print(f"Creating pool of {num_workers} workers")
     with mp.Pool(num_workers) as pool:
@@ -69,7 +67,9 @@ def main():
         for _, row in df.iterrows():
             job_queue.put(row)
 
-        pool.map(worker_process, [(job_queue, i, args.eval_dir) for i in range(num_workers)])
+        pool.map(
+            worker_process, [(job_queue, i, args.eval_dir) for i in range(num_workers)]
+        )
 
     # for index, row in df.iterrows():
     #     print(f"Running instance {row['instance_id']}")
@@ -93,6 +93,7 @@ def main():
 
     #     validate_instance(row, eval_dir=args.eval_dir)
 
+
 def worker_process(args):
     queue, worker_id, eval_dir = args
 
@@ -111,6 +112,7 @@ def worker_process(args):
     while not queue.empty():
         row = queue.get()
         print(f"Worker {worker_id} processing instance: ", row["instance_id"])
+
 
 def setup_sandbox(worker_id):
     # Create sandbox directory if it doesn't exist
@@ -180,12 +182,11 @@ def setup_sandbox(worker_id):
             f.write("Marker file")
 
 
-def validate_instance(row, eval_dir = None):
+def validate_instance(row, sandbox_dir, eval_dir=None):
     repo_name = row["repo"].split("/")[-1]
     test_patch = row["test_patch"]
-    with open(os.path.join(SCRIPT_DIR, "sandbox", repo_name, "test.patch"), "w") as f:
+    with open(os.path.join(sandbox_dir, repo_name, "test.patch"), "w") as f:
         f.write(test_patch)
-    
 
     if row["repo"] == "django/django":
         if row["version"] == "4.0":
@@ -197,16 +198,30 @@ def validate_instance(row, eval_dir = None):
     else:
         # Sympy uses python 3.9
         environment = "env_3_9"
-    
+
     diff_pat = r"diff --git a/.* b/(.*)"
-    test_patch = row['test_patch']
+    test_patch = row["test_patch"]
     directives = re.findall(diff_pat, test_patch)
 
     # In some cases the agent may of made a change to the test file,
     # so we need to revert it before running the tests
     base_commit = row["base_commit"]
-    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git checkout {base_commit} -- {' '.join(directives)}", shell=True, check=True)
-    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git apply test.patch", shell=True, check=True)
+    run(
+        f"cd {sandbox_dir}/{repo_name} && git checkout {base_commit} -- {' '.join(directives)}",
+        shell=True,
+        check=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        bufsize=1,
+    )
+    run(
+        f"cd {sandbox_dir}/{repo_name} && git apply test.patch",
+        shell=True,
+        check=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        bufsize=1,
+    )
 
     # For Django tests, remove extension + "tests/" prefix and convert slashes to dots (module referencing)
     if row["repo"] == "django/django":
@@ -220,48 +235,69 @@ def validate_instance(row, eval_dir = None):
 
     if row["repo"] == "django/django":
         cmd = run(
-            f"bash -c 'cd {SCRIPT_DIR}/sandbox/{repo_name} && "
+            f"bash -c 'cd {sandbox_dir}/{repo_name} && "
             f"source ~/miniconda3/bin/activate && "
             f"conda activate ./{environment} && "
             f"pip install -e . && "
             f"./tests/runtests.py --settings=test_sqlite --parallel 1 {' '.join(directives)}'",
-            shell=True
+            shell=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            bufsize=1,
         )
     else:
         cmd = run(
-            f"bash -c 'cd {SCRIPT_DIR}/sandbox/{repo_name} && "
+            f"bash -c 'cd {sandbox_dir}/{repo_name} && "
             f"source ~/miniconda3/bin/activate && "
             f"conda activate ./{environment} && "
             f"pip install mpmath==1.3.0 flake8-comprehensions && "
             f"python -m pip install -e . && "
             f"PYTHONWARNINGS='ignore::UserWarning,ignore::SyntaxWarning' bin/test -C --verbose {' '.join(directives)}'",
-            shell=True
+            shell=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            bufsize=1,
         )
 
     if cmd.returncode == 0:
-        print('\033[92mTest passed\033[0m')
+        print("\033[92mTest passed\033[0m")
         result = "pass"
     else:
-        print('\033[91mTest failed\033[0m')
+        print("\033[91mTest failed\033[0m")
         result = "fail"
 
     if eval_dir:
-        with open(os.path.join(eval_dir, "eval.log"), 'a') as f:
+        with open(os.path.join(eval_dir, "eval.log"), "a") as f:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(f"{row['instance_id']},{result},{timestamp}\n")
-    
+
     print("Reverting test patch...")
-    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git apply -R test.patch", shell=True, check=True)
-    os.remove(os.path.join(SCRIPT_DIR, "sandbox", repo_name, "test.patch"))
-    print('Test patch reverted')
+    run(
+        f"cd {sandbox_dir}/{repo_name} && git apply -R test.patch",
+        shell=True,
+        check=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        bufsize=1,
+    )
+    os.remove(os.path.join(sandbox_dir, repo_name, "test.patch"))
+    print("Test patch reverted")
 
     if eval_dir:
         # Collect any remaining changes into a patch file
         patch_file = os.path.join(eval_dir, "trajs", f"{row['instance_id']}.patch")
     else:
-        patch_file = os.path.join(SCRIPT_DIR, f"current_instance.patch")
+        patch_file = os.path.join(sandbox_dir, f"current_instance.patch")
 
-    run(f"cd {SCRIPT_DIR}/sandbox/{repo_name} && git diff > {patch_file}", shell=True, check=True)
+    run(
+        f"cd {sandbox_dir}/{repo_name} && git diff > {patch_file}",
+        shell=True,
+        check=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        bufsize=1,
+    )
+
 
 if __name__ == "__main__":
     main()
