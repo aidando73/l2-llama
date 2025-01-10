@@ -62,6 +62,11 @@ def main():
 
     client = LlamaStackClient(base_url="http://localhost:5000")
 
+    # Create job queue and fill it with instances
+    job_queue = mp.Queue()
+    for _, row in df.iterrows():
+        job_queue.put(row)
+
     for index, row in df.iterrows():
         print(f"Running instance {row['instance_id']}")
         _, repo_name = row["repo"].split("/")
