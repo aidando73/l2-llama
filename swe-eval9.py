@@ -54,7 +54,8 @@ count = 0
 for i, row in df.iterrows():
     if count >= NUM_INSTANCES:
         break
-    dir = os.path.join(SANDBOX_DIR, row['repo'].split('/')[1])
+    repo_name = row['repo'].split('/')[1]
+    dir = os.path.join(SANDBOX_DIR, repo_name)
     commit = row['base_commit']
 
     print("Running instance", row['instance_id'])
@@ -75,7 +76,11 @@ for i, row in df.iterrows():
         print(f"Agent exited with error: {e}")
 
     # Add to predictions.jsonl
-    patch = os.popen(f"cd {dir} && git diff").read()
+    # print(dir)
+    # patch = os.popen(f"cd {dir} && git diff").read()
+    res = run(f"cd {dir} && git diff", shell=True, check=True, capture_output=True)
+    patch = res.stdout.decode("utf-8")
+    print("Retrieving patch: ", patch)
     pred = {
         "instance_id": row["instance_id"],
         "model_name_or_path": "l2-llama",
