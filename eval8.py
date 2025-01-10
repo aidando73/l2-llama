@@ -43,6 +43,16 @@ def main():
     if args.eval_dir:
         os.makedirs(os.path.join(args.eval_dir, "trajs"), exist_ok=True)
 
+        if os.path.exists(os.path.join(args.eval_dir, "eval.log")):
+            # Filter out already ran instances
+            with open(os.path.join(args.eval_dir, "eval.log")) as f:
+                ran_instances = set()
+                for line in f:
+                    instance_id = line.split(",")[0]
+                    ran_instances.add(instance_id)
+            print(f"Filtering out {len(ran_instances)} already ran instances")
+            df = df[~df["instance_id"].isin(ran_instances)]
+
 
     client = LlamaStackClient(base_url="http://localhost:5000")
 
