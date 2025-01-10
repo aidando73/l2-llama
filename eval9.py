@@ -61,6 +61,7 @@ def main():
 
     
     # Create a pool of workers
+    print(f"Creating pool of {num_workers} workers")
     with mp.Pool(num_workers) as pool:
         # Create job queue and fill it with instances
         manager = mp.Manager()
@@ -94,6 +95,16 @@ def main():
 
 def worker_process(args):
     queue, worker_id, eval_dir = args
+
+    # Redirect stdout to a file
+    if eval_dir is None:
+        log_path = os.path.join(SCRIPT_DIR, f"worker_{worker_id}.log")
+    else:
+        log_path = os.path.join(eval_dir, f"worker_{worker_id}.log")
+    sys.stdout = open(log_path, "w", buffering=1)
+    sys.stderr = sys.stdout
+
+    print(f"Worker {worker_id} started")
     setup_sandbox(worker_id)
     client = LlamaStackClient(base_url="http://localhost:5000")
 
