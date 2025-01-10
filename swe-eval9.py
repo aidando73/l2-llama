@@ -68,7 +68,7 @@ for i, row in df.iterrows():
             client=client,
             repo=repo_name,
             problem_statement=row["problem_statement"],
-            eval_dir=args.eval_dir,
+            eval_dir=eval_dir,
             instance_id=row["instance_id"],
         )
     except Exception as e:
