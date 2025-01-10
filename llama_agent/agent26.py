@@ -363,6 +363,8 @@ def run_agent(
                     message += response.content
                     message += "<|eot_id|>"
                     # We want to form an assistant response, so skip the remaining logic
+                    print("Result: File successfully viewed.")
+                    print("File analysis: " + magenta(response.content))
                     continue
                 elif tool_name == "finish":
                     if not edit_made:
