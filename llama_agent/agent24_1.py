@@ -3,6 +3,7 @@ from typing import Literal, Optional, Tuple, Union
 import re
 import json
 from llama_stack_client import LlamaStackClient, SamplingParams
+from llama_stack_client.types.shared_params.sampling_params import SamplingParams
 from llama_models.llama3.api.chat_format import ChatFormat
 from llama_models.llama3.api.tokenizer import Tokenizer
 from llama_models.llama3.api.datatypes import StopReason
