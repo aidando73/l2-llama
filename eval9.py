@@ -45,8 +45,6 @@ def main():
         num_workers = min(num_workers, num_instances)
         df = df.sample(n=num_instances)
 
-    setup_sandbox(df=df, num_workers=num_workers)
-    
     if args.eval_dir:
         os.makedirs(os.path.join(args.eval_dir, "trajs"), exist_ok=True)
 
@@ -61,16 +59,16 @@ def main():
             df = df[~df["instance_id"].isin(ran_instances)]
 
 
-    client = LlamaStackClient(base_url="http://localhost:5000")
-
-    # Create job queue and fill it with instances
-    job_queue = mp.Queue()
-    for _, row in df.iterrows():
-        job_queue.put(row)
     
     # Create a pool of workers
     with mp.Pool(num_workers) as pool:
-        pool.map(process_instance, [(job_queue, i, args.eval_dir) for i in range(num_workers)])
+        # Create job queue and fill it with instances
+        manager = mp.Manager()
+        job_queue = manager.Queue()
+        for _, row in df.iterrows():
+            job_queue.put(row)
+
+        pool.map(worker_process, [(job_queue, i, args.eval_dir) for i in range(num_workers)])
 
     # for index, row in df.iterrows():
     #     print(f"Running instance {row['instance_id']}")
@@ -94,8 +92,11 @@ def main():
 
     #     validate_instance(row, eval_dir=args.eval_dir)
 
-def process_instance(queue, worker_id, eval_dir=None):
+def worker_process(args):
+    queue, worker_id, eval_dir = args
     setup_sandbox(worker_id)
+    client = LlamaStackClient(base_url="http://localhost:5000")
+
     while not queue.empty():
         row = queue.get()
         print(f"Worker {worker_id} processing instance: ", row["instance_id"])
