@@ -76,7 +76,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             Here is a list of functions in JSON format that you can invoke.
 
             [
-                {% for t in tools -%}
+                {% for t in custom_tools -%}
                 {# manually setting up JSON because jinja sorts keys in unexpected ways -#}
                 {%- set tname = t.tool_name -%}
                 {%- set tdesc = t.description -%}
