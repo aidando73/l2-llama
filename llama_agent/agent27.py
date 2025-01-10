@@ -238,65 +238,51 @@ def run_agent(
                         path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
 
                         # Prompt for old content
-                        temp_message = message
-                        temp_message += "<|eot_id|>"
-                        temp_message += chat_message("tool", (
-                            "The file {path} has the following content:\n"
-                            "<file_content>\n"
-                            "{file_content}\n"
-                            "</file_content>\n"
-                            "Please provide the old content to replace. "
-                            "Please format it it between triple backticks. "
+                        message += chat_message("tool", (
+                            "Please provide the old content to replace."
+                            "Please format it it between triple backticks."
                             "E.g., ```\nprint('Hello, world!')\n```"
-                        )).format(path=tool_params["path"], file_content=file_content)
-                        temp_message += header("assistant")
-                        print(f"Input tokens: {token_count(temp_message)}")
+                        ))
+                        message += "<|eot_id|>"
+                        print(f"Input tokens: {token_count(message)}")
                         print("OLD_CONTENT: ")
+                        message += header("assistant")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
-                            content=temp_message,
+                            content=message,
                         )
                         old_content = strip_code_block(response.content)
                         # Sometimes the agent will add additional text or no backticks
                         # So re-introduce the backticks to provide it a better example
-                        temp_message += f"```\n{old_content}\n```"
+                        message += f"```\n{old_content}\n```"
                         print(blue(old_content))
-                        temp_message += "<|eot_id|>"
+                        message += "<|eot_id|>"
+                        message += header("assistant")
 
                         # Prompt for new content
-                        temp_message += chat_message("tool", (
+                        message += chat_message("tool", (
                             "Please provide the new content to replace the old content with."
                             "Please format it between triple backticks."
                             "E.g., ```\nprint('Hello, world!')\n```"
                         ))
-                        temp_message += "<|eot_id|>"
-                        temp_message += header("assistant")
-                        print(f"Input tokens: {token_count(temp_message)}")
+                        message += "<|eot_id|>"
+                        message += header("assistant")
+                        print(f"Input tokens: {token_count(message)}")
                         print("NEW_CONTENT: ")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
-                            content=temp_message,
+                            content=message,
                         )
                         new_content = strip_code_block(response.content)
-                        temp_message += f"```\n{new_content}\n```"
+                        message += f"```\n{new_content}\n```"
                         print(blue(new_content))
-                        temp_message += "<|eot_id|>"
-                        temp_message += header("tool")
-
-                        with open("edit_file-prompt.txt", "w") as f:
-                            f.write(temp_message)
-
-                        # Now we add back to the message, but redact the full file content
-                        temp_message = temp_message.replace("<file_content>\n" + file_content + "\n</file_content>", "<file_content>[REDACTED]</file_content>")
-
-                        message += temp_message
-
-
+                        message += "<|eot_id|>"
+                        message += header("tool")
 
                         with open(path, "r") as f:
                             old_file_content = f.read()
 
-                        try:
+                        try:    
                             new_file_content = replace_content(old_file_content, old_content, new_content)
                             with open(path, "w") as f:
                                 f.write(new_file_content)
@@ -316,61 +302,15 @@ def run_agent(
                                 result, result_msg = ("success", "File successfully updated\n" + "\n".join(diff))
                         except AssertionError as e:
                             result, result_msg = ("error", f"ERROR - {e}")
-                elif tool_name == "view_file":
-                    if (
-                        error := validate_param_exists("path", tool_params)
-                        or validate_not_symlink(repo, tool_params["path"])
-                        or validate_path_in_sandbox(repo, tool_params["path"])
-                        or validate_file_exists(repo, tool_params["path"])
-                        or validate_not_a_directory(repo, tool_params["path"])
-                    ):
-                        return ("error", error)
-
-                    path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
-                    with open(f"{path}", "r") as f:
-                        file_content = f.read()
-
-                    # We ask the agent to only keep the relevant code from the file - to avoid long context
-                    # Hypothesis: It performs poorly when keeping the entire file in context
-                    temp_message = "<|begin_of_text|>"
-                    temp_message += header("system")
-                    temp_message += dedent("""\
-                        You are an expert software engineer. You're working in a repository called {repo}.
-                        You are solving the following problem:
-
-                        <problem_statement>
-                        {problem_statement}
-                        </problem_statement>
-
-                        You have viewed the following file which may or may not be relevant to the problem
-                        <file_content>
-                        {file_content}
-                        </file_content>
-
-                        Please determine whether the file is relevant to the problem. \
-                        If it is, please extract relevant snippets from the file and annotate them with key insights relevant to solving the problem. \
-                        If the file is not relevant, please do not include any information from the file.
-                    """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
-                    temp_message += "<|eot_id|>"
-                    temp_message += header("assistant")
-                    print(f"Input tokens: {token_count(temp_message)}")
-                    response = client.inference.completion(
-                        model_id=MODEL_ID,
-                        content=temp_message,
-                    )
-
-                    message += "Result: File successfully viewed."
-                    message += "<|eot_id|>"
-                    message += header("assistant")
-                    message += response.content
-                    message += "<|eot_id|>"
-                    # We want to form an assistant response, so skip the remaining logic
-                    print("Result: File successfully viewed.")
-                    print("File analysis: " + magenta(response.content))
-                    continue
                 elif tool_name == "finish":
                     if not edit_made:
-                        result, result_msg = ("error", "ERROR - No changes made to the codebase. Please make changes to the codebase before calling this function.")
+                        result = "error"
+                        result_msg = (
+                            "ERROR - you have called finish() without making any changes. "
+                            "You have made a mistake somewhere. "
+                            "Please review everything you have done, identify where you made a mistake and try again. "
+                            "This time, ensure you make a successful edit_file call."
+                        )
                     else:
                         result, result_msg = ("success", "Task marked as finished")
                 else:
@@ -438,10 +378,7 @@ TOOLS = [
     ),
     ToolDefinition(
         tool_name="edit_file",
-        description=(
-            "Edit a file. Specify the path to the file to edit. "
-            "You will be given the full file content and will be prompted for the old and new content to edit the file."
-        ),
+        description="Edit a file. Specify the path to the file to edit. You will be prompted for the old and new content to edit the file.",
         parameters={
             "path": ToolParamDefinition(
                 param_type="string",
@@ -497,6 +434,21 @@ def execute_tool_call(
         path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
         files = list_files_in_repo(path, depth=1)
         return ("success", "\n".join(files))
+
+    elif tool_name == "view_file":
+        if (
+            error := validate_param_exists("path", tool_params)
+            or validate_not_symlink(repo, tool_params["path"])
+            or validate_path_in_sandbox(repo, tool_params["path"])
+            or validate_file_exists(repo, tool_params["path"])
+            or validate_not_a_directory(repo, tool_params["path"])
+        ):
+            return ("error", error)
+
+        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
+        with open(f"{path}", "r") as f:
+            file_content = f.read()
+        return ("success", file_content)
 
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
