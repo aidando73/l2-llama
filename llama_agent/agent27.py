@@ -42,14 +42,13 @@ sampling_params = SamplingParams(
     max_tokens=MAX_OUTPUT_TOKENS,
 )
 
-SANDBOX_DIR = os.path.join(REPO_DIR, "sandbox")
 tokenizer = Tokenizer.get_instance()
 formatter = ChatFormat(tokenizer)
 
 
 class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
     def gen(
-        self, problem_statement: str, repo: str, custom_tools: list[ToolDefinition]
+        self, problem_statement: str, sandbox_dir: str, repo: str, custom_tools: list[ToolDefinition]
     ) -> str:
         template_str = textwrap.dedent(
             """
@@ -134,7 +133,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
         )
 
         files_in_repo = "\n".join(
-            list_files_in_repo(os.path.join(SANDBOX_DIR, repo), depth=1)
+            list_files_in_repo(os.path.join(sandbox_dir, repo), depth=1)
         )
         return PromptTemplate(
             template_str.lstrip("\n"),
@@ -164,7 +163,7 @@ def run_agent(
 
     message = (
         L2SystemPromptGenerator()
-        .gen(problem_statement=problem_statement, repo=repo, custom_tools=TOOLS)
+        .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, custom_tools=TOOLS)
         .render()
     )
 
@@ -460,7 +459,7 @@ def execute_tool_call(
         ):
             return ("error", error)
 
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
+        path = os.path.join(sandbox_dir, repo, tool_params["path"])
         with open(f"{path}", "r") as f:
             file_content = f.read()
         return ("success", file_content)
