@@ -302,7 +302,13 @@ def run_agent(
                             result, result_msg = ("error", f"ERROR - {e}")
                 elif tool_name == "finish":
                     if not edit_made:
-                        result, result_msg = ("error", "ERROR - No changes made to the codebase. Please make changes to the codebase before calling this function.")
+                        result = "error"
+                        result_msg = (
+                            "ERROR - you have called finish() without making any changes. "
+                            "You have made a mistake somewhere. "
+                            "Please review everything you have done, identify where you made a mistake and try again. "
+                            "This time, ensure you make a successful edit_file call."
+                        )
                     else:
                         result, result_msg = ("success", "Task marked as finished")
                 else:
