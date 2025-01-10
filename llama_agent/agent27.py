@@ -239,9 +239,11 @@ def run_agent(
 
                         # Prompt for old content
                         message += chat_message("tool", (
-                            "Please provide the old content to replace."
-                            "Please format it it between triple backticks."
-                            "E.g., ```\nprint('Hello, world!')\n```"
+                            "Please provide the old content to replace. "
+                            "Ensure that the old content is an exact match of the content in the file. "
+                            "If the content is not an exact match, this command will fail. "
+                            "Please format it between triple backticks. "
+                            "E.g., ```\nprint('Hello, world!')\n```\n"
                         ))
                         message += "<|eot_id|>"
                         print(f"Input tokens: {token_count(message)}")
@@ -261,8 +263,8 @@ def run_agent(
 
                         # Prompt for new content
                         message += chat_message("tool", (
-                            "Please provide the new content to replace the old content with."
-                            "Please format it between triple backticks."
+                            "Provide the new content to replace the old content with."
+                            "Please format it between triple backticks. "
                             "E.g., ```\nprint('Hello, world!')\n```"
                         ))
                         message += "<|eot_id|>"
