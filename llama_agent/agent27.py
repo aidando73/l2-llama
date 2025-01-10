@@ -3,6 +3,7 @@ from typing import Literal, Optional, Tuple, Union
 import re
 import json
 from llama_stack_client import LlamaStackClient
+from llama_stack_client.types.shared_params.sampling_params import SamplingParams
 from llama_models.llama3.api.chat_format import ChatFormat
 from llama_models.llama3.api.tokenizer import Tokenizer
 from llama_models.llama3.api.datatypes import StopReason
@@ -31,6 +32,15 @@ import difflib
 MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 # MODEL_ID = "meta-llama/Llama-3.1-405B-Instruct-FP8"
 ITERATIONS = 15
+
+# 512 is the default for fireworks on Llama-stack
+# 4096 seems to be the max - https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct/discussions/6
+MAX_OUTPUT_TOKENS = 2048
+
+sampling_params = SamplingParams(
+    strategy="greedy",
+    max_tokens=MAX_OUTPUT_TOKENS,
+)
 
 SANDBOX_DIR = os.path.join(REPO_DIR, "sandbox")
 tokenizer = Tokenizer.get_instance()
@@ -174,6 +184,7 @@ def run_agent(
         response = client.inference.completion(
             model_id=MODEL_ID,
             content=message,
+            sampling_params=sampling_params,
         )
         if "EXECUTE:" in response.content:
             # Sometimes the agent will respond with the EXECUTE statement
@@ -199,6 +210,7 @@ def run_agent(
         response = client.inference.completion(
             model_id=MODEL_ID,
             content=message,
+            sampling_params=sampling_params,
         )
         message += response.content
         message += f"<|eot_id|>"
@@ -252,6 +264,7 @@ def run_agent(
                         response = client.inference.completion(
                             model_id=MODEL_ID,
                             content=message,
+                            sampling_params=sampling_params,
                         )
                         old_content = strip_code_block(response.content)
                         # Sometimes the agent will add additional text or no backticks
@@ -274,6 +287,7 @@ def run_agent(
                         response = client.inference.completion(
                             model_id=MODEL_ID,
                             content=message,
+                            sampling_params=sampling_params,
                         )
                         new_content = strip_code_block(response.content)
                         message += f"```\n{new_content}\n```"
