@@ -2,6 +2,7 @@ from datasets import load_dataset
 import os
 import sys
 import json
+from subprocess import run
 
 swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
@@ -31,6 +32,19 @@ log_path = os.path.expanduser("~/dev/llama-stack/llama-stack.log")
 with open(log_path) as f:
     line_count = sum(1 for line in f)
 
+# Clone all repos
+unique_repos = df["repo"].unique()
+for repo in unique_repos:
+    repo_name = repo.split("/")[-1]
+    repo_path = os.path.join(SCRIPT_DIR, "sandbox", repo_name)
+    if not os.path.exists(repo_path):
+        print(f"Cloning {repo} repository...")
+        run(
+            f"git clone https://github.com/{repo}.git {repo_path}",
+            shell=True,
+            check=True,
+        )
+
 count = 0
 # Loop through all instances
 for i, row in df.iterrows():
@@ -44,17 +58,6 @@ for i, row in df.iterrows():
     # Checkout commit (force) and clean directory
     os.system(f"cd {dir} && git checkout {commit} --force && git clean -fdx")
 
-    unique_repos = df["repo"].unique()
-    for repo in unique_repos:
-        repo_name = repo.split("/")[-1]
-        repo_path = os.path.join(SCRIPT_DIR, "sandbox", repo_name)
-        if not os.path.exists(repo_path):
-            print(f"Cloning {repo} repository...")
-            run(
-                f"git clone https://github.com/{repo}.git {repo_path}",
-                shell=True,
-                check=True,
-            )
 
     # Run the agent
     try:
