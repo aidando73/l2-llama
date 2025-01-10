@@ -67,7 +67,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
 
             2. EXECUTE:
             - Make the appropriate function call(s)
-            - Format calls in the format of [func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]
+            - Format calls in the correct format specified below
 
             Solve the users problem by making one or more function/tool calls.
 
@@ -116,7 +116,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
             <|start_header_id|>assistant<|end_header_id|>
 
             EXECUTE:
-            [Function call in format of [func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]]<|eot_id|>
+            [Function call in the correct format specified above]<|eot_id|>
 
             Please start by listing out and viewing files in the repository to understand the problem.
             Then make the necessary changes to solve the problem.<|eot_id|>
