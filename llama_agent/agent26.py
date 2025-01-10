@@ -345,7 +345,10 @@ def run_agent(
                         {file_content}
                         </file_content>
 
-                        Please extract the relevant information from the file. Include your reasoning on why the information is relevant alongisde snippets of the file.
+                        This file may or may not be relevant to the problem statement. \
+                        Please determine whether the file is relevant to the problem statement. \
+                        If it is, please extract relevant snippets from the file and annotate them with key insights relevant to the problem statement. \
+                        If the file is not relevant, please do not include any information from the file.
                     """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
                     temp_message += "<|eot_id|>"
                     temp_message += header("assistant")
