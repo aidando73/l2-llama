@@ -3,6 +3,7 @@ import os
 import sys
 import json
 from subprocess import run
+from llama_agent.agent25 import run_agent
 
 swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
