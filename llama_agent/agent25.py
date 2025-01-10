@@ -471,33 +471,6 @@ def parse_tool_calls(
                 - error_message (str): The error message
     """
     tool_calls = []
-    for match in re.finditer(r"<tool>(.*?)</tool>", content, re.DOTALL):
-        raw_function = match.group(1)
-        try:
-            function = json.loads(raw_function)
-            if "type" not in function or function["type"] != "function":
-                return (
-                    "error",
-                    "Tool call invalid syntax: "
-                    + raw_function
-                    + 'expected <tool>{"type": "function", ...}</tool>',
-                )
-            if "name" not in function:
-                return (
-                    "error",
-                    "Tool call invalid syntax: "
-                    + raw_function
-                    + 'expected <tool>{"type": "function", "name": "func_name", ...}</tool>',
-                )
-            function_name = function["name"]
-            args = function["parameters"]
-            tool_calls.append((function_name, args))
-        except Exception as e:
-            tool_calls.append(
-                ("error", f"Tool call invalid syntax: {raw_function} {e}")
-            )
-
-    print(len(tool_calls), is_json(content))
     if len(tool_calls) == 0 and is_json(content):
         # Sometimes the tool call is a list of functions
         function = json.loads(content)
@@ -521,7 +494,11 @@ def parse_tool_calls(
                             + 'expected {"type": "function", "name": "func_name", ...}',
                         )
                     )
-                tool_calls.append((func["name"], func["parameters"]))
+                if "parameters" in func:
+                    args = func["parameters"]
+                else:
+                    args = {}
+                tool_calls.append((func["name"], args))
         else:
             if "type" not in function or function["type"] != "function":
                 tool_calls.append(
@@ -541,7 +518,11 @@ def parse_tool_calls(
                         + 'expected {"type": "function", "name": "func_name", ...}',
                     )
                 )
-            tool_calls.append((function["name"], function["parameters"]))
+            if "parameters" in function:
+                args = function["parameters"]
+            else:
+                args = {}
+            tool_calls.append((function["name"], args))
     if len(tool_calls) == 0:
         return [("error", content)]
     return tool_calls

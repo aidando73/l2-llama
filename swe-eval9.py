@@ -79,7 +79,9 @@ for i, row in df.iterrows():
             instance_id=row["instance_id"],
         )
     except Exception as e:
+        import traceback
         print(f"Agent exited with error: {e}")
+        traceback.print_exc()
 
     # Add to predictions.jsonl
     # print(dir)

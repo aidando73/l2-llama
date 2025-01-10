@@ -9,6 +9,7 @@ from subprocess import run
 from argparse import ArgumentParser
 import re
 import datetime
+import traceback
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -74,6 +75,7 @@ def main():
             )
         except Exception as e:
             print(f"Agent exited with error: {e}")
+            traceback.print_exc()
 
         validate_instance(row, eval_dir=args.eval_dir)
 
