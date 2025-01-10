@@ -236,46 +236,60 @@ def run_agent(
                         path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
 
                         # Prompt for old content
-                        message += chat_message("tool", (
-                            "Please provide the old content to replace."
-                            "Please format it it between triple backticks."
+                        temp_message = message
+                        temp_message += "<|eot_id|>"
+                        temp_message += chat_message("tool", (
+                            "The file {path} has the following content:\n"
+                            "<file_content>\n"
+                            "{file_content}\n"
+                            "</file_content>\n"
+                            "Please provide the old content to replace. "
+                            "Please format it it between triple backticks. "
                             "E.g., ```\nprint('Hello, world!')\n```"
-                        ))
-                        message += "<|eot_id|>"
-                        print(f"Input tokens: {token_count(message)}")
+                        )).format(path=tool_params["path"], file_content=file_content)
+                        temp_message += header("assistant")
+                        print(f"Input tokens: {token_count(temp_message)}")
                         print("OLD_CONTENT: ")
-                        message += header("assistant")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
-                            content=message,
+                            content=temp_message,
                         )
                         old_content = strip_code_block(response.content)
                         # Sometimes the agent will add additional text or no backticks
                         # So re-introduce the backticks to provide it a better example
-                        message += f"```\n{old_content}\n```"
+                        temp_message += f"```\n{old_content}\n```"
                         print(blue(old_content))
-                        message += "<|eot_id|>"
-                        message += header("assistant")
+                        temp_message += "<|eot_id|>"
 
                         # Prompt for new content
-                        message += chat_message("tool", (
+                        temp_message += chat_message("tool", (
                             "Please provide the new content to replace the old content with."
                             "Please format it between triple backticks."
                             "E.g., ```\nprint('Hello, world!')\n```"
                         ))
-                        message += "<|eot_id|>"
-                        message += header("assistant")
-                        print(f"Input tokens: {token_count(message)}")
+                        temp_message += "<|eot_id|>"
+                        temp_message += header("assistant")
+                        print(f"Input tokens: {token_count(temp_message)}")
                         print("NEW_CONTENT: ")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
-                            content=message,
+                            content=temp_message,
                         )
                         new_content = strip_code_block(response.content)
-                        message += f"```\n{new_content}\n```"
+                        temp_message += f"```\n{new_content}\n```"
                         print(blue(new_content))
-                        message += "<|eot_id|>"
-                        message += header("tool")
+                        temp_message += "<|eot_id|>"
+                        temp_message += header("tool")
+
+                        with open("edit_file-prompt.txt", "w") as f:
+                            f.write(temp_message)
+
+                        # Now we add back to the message, but redact the full file content
+                        temp_message = temp_message.replace("<file_content>\n" + file_content + "\n</file_content>", "<file_content>[REDACTED]</file_content>")
+
+                        message += temp_message
+
+
 
                         with open(path, "r") as f:
                             old_file_content = f.read()
@@ -415,7 +429,10 @@ TOOLS = [
     ),
     ToolDefinition(
         tool_name="edit_file",
-        description="Edit a file. Specify the path to the file to edit. You will be prompted for the old and new content to edit the file.",
+        description=(
+            "Edit a file. Specify the path to the file to edit. "
+            "You will be given the full file content and will be prompted for the old and new content to edit the file."
+        ),
         parameters={
             "path": ToolParamDefinition(
                 param_type="string",
