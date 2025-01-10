@@ -334,7 +334,7 @@ def run_agent(
                     temp_message += header("system")
                     temp_message += dedent("""\
                         You are an expert software engineer. You're working in a repository called {repo}.
-                        You were given the following problem statement:
+                        You are solving the following problem:
 
                         <problem_statement>
                         {problem_statement}
@@ -345,8 +345,7 @@ def run_agent(
                         {file_content}
                         </file_content>
 
-                        But you have a limited context window. Please keep only the most relevant sections of the file and nothing else.
-                        Please do not include any other text in your response.
+                        Please extract the relevant information from the file. Include your reasoning on why the information is relevant alongisde snippets of the file.
                     """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
                     temp_message += "<|eot_id|>"
                     temp_message += header("assistant")
@@ -356,9 +355,13 @@ def run_agent(
                         content=temp_message,
                     )
 
-                    result_msg = "File successfully viewed. You decided to keep within context:\n"
-                    result_msg += response.content
-                    result = "success"
+                    message += "Result: File successfully viewed."
+                    message += "<|eot_id|>"
+                    message += header("assistant")
+                    message += response.content
+                    message += "<|eot_id|>"
+                    # We want to form an assistant response, so skip the remaining logic
+                    continue
                 elif tool_name == "finish":
                     if not edit_made:
                         result, result_msg = ("error", "ERROR - No changes made to the codebase. Please make changes to the codebase before calling this function.")
