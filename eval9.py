@@ -71,27 +71,7 @@ def main():
             worker_process, [(job_queue, i, args.eval_dir) for i in range(num_workers)]
         )
 
-    # for index, row in df.iterrows():
-    #     print(f"Running instance {row['instance_id']}")
-    #     _, repo_name = row["repo"].split("/")
-    #     repo_path = os.path.join(SCRIPT_DIR, "sandbox", repo_name)
-    #     base_commit = row["base_commit"]
-    #     print(f"Checking out commit {base_commit}")
-    #     run(f"cd {repo_path} && git checkout -f {base_commit}", shell=True, check=True)
-
-    #     try:
-    #         run_agent(
-    #             client=client,
-    #             repo=repo_name,
-    #             problem_statement=row["problem_statement"],
-    #             eval_dir=args.eval_dir,
-    #             instance_id=row["instance_id"],
-    #         )
-    #     except Exception as e:
-    #         print(f"Agent exited with error: {e}")
-    #         traceback.print_exc()
-
-    #     validate_instance(row, eval_dir=args.eval_dir)
+    print("Done running all instances")
 
 
 def worker_process(args):
@@ -136,6 +116,7 @@ def worker_process(args):
                 problem_statement=row["problem_statement"],
                 eval_dir=eval_dir,
                 instance_id=row["instance_id"],
+                sandbox_dir=sandbox_dir,
             )
         except Exception as e:
             print(f"Agent exited with error: {e}")

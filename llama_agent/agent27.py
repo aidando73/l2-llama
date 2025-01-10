@@ -151,6 +151,7 @@ def run_agent(
     client: LlamaStackClient,
     repo: str,
     problem_statement: str,
+    sandbox_dir: Optional[str] = os.path.join(REPO_DIR, "sandbox"),
     eval_dir: Optional[str] = None,
     instance_id: Optional[str] = None,
 ) -> Tuple[Literal["changes_made", "no_changes_made"], str, Optional[str]]:
@@ -240,14 +241,14 @@ def run_agent(
                 # Llama needs to escape newlines and double quotes, it's easier to just prompt for the old and new content
                 if tool_name == "edit_file":
                     if (error := validate_param_exists("path", tool_params)
-                        or validate_path_in_sandbox(repo, tool_params["path"])
-                        or validate_not_symlink(repo, tool_params["path"])
-                        or validate_file_exists(repo, tool_params["path"])
-                        or validate_not_a_directory(repo, tool_params["path"])
+                        or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+                        or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+                        or validate_file_exists(sandbox_dir, repo, tool_params["path"])
+                        or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
                     ):
                         result, result_msg = ("error", error)
                     else:
-                        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
+                        path = os.path.join(sandbox_dir, repo, tool_params["path"])
 
                         # Prompt for old content
                         message += chat_message("tool", (
@@ -328,7 +329,7 @@ def run_agent(
                     else:
                         result, result_msg = ("success", "Task marked as finished")
                 else:
-                    result, result_msg = execute_tool_call(tool_name, tool_params, repo)
+                    result, result_msg = execute_tool_call(tool_name, tool_params, sandbox_dir, repo)
             except Exception as e:
                 result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
@@ -422,7 +423,7 @@ TOOLS = [
 
 
 def execute_tool_call(
-    tool_name: str, tool_params: dict[str, str], repo: str
+    tool_name: str, tool_params: dict[str, str], sandbox_dir: str, repo: str
 ) -> Union[Tuple[Literal["success"], str], Tuple[Literal["error"], str]]:
     """
     Execute a tool call and return a message indicating the result of the tool call.
@@ -439,23 +440,23 @@ def execute_tool_call(
     if tool_name == "list_files":
         if (
             error := validate_param_exists("path", tool_params)
-            or validate_not_symlink(repo, tool_params["path"])
-            or validate_path_in_sandbox(repo, tool_params["path"])
-            or validate_directory_exists(repo, tool_params["path"])
+            or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+            or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+            or validate_directory_exists(sandbox_dir, repo, tool_params["path"])
         ):
             return ("error", error)
 
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
+        path = os.path.join(sandbox_dir, repo, tool_params["path"])
         files = list_files_in_repo(path, depth=1)
         return ("success", "\n".join(files))
 
     elif tool_name == "view_file":
         if (
             error := validate_param_exists("path", tool_params)
-            or validate_not_symlink(repo, tool_params["path"])
-            or validate_path_in_sandbox(repo, tool_params["path"])
-            or validate_file_exists(repo, tool_params["path"])
-            or validate_not_a_directory(repo, tool_params["path"])
+            or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+            or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+            or validate_file_exists(sandbox_dir, repo, tool_params["path"])
+            or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
         ):
             return ("error", error)
 
@@ -549,7 +550,7 @@ def validate_param_exists(
     return None
 
 
-def validate_path_in_sandbox(repo: str, path: str) -> Optional[str]:
+def validate_path_in_sandbox(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
     """
     Validate that a path stays within the sandbox directory.
 
@@ -560,8 +561,8 @@ def validate_path_in_sandbox(repo: str, path: str) -> Optional[str]:
         Optional[str]: Error message if path is invalid, None if valid
     """
     # Resolve the absolute path after translation to catch any ../ tricks
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
-    sandbox_path = os.path.abspath(SANDBOX_DIR)
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
+    sandbox_path = os.path.abspath(sandbox_dir)
 
     if not resolved_path.startswith(sandbox_path):
         # From the agent's perspective, any paths not in the sandbox don't exist
@@ -569,29 +570,29 @@ def validate_path_in_sandbox(repo: str, path: str) -> Optional[str]:
     return None
 
 
-def validate_not_symlink(repo: str, path: str) -> Optional[str]:
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+def validate_not_symlink(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if os.path.islink(resolved_path):
         return f"ERROR - File {path} is a symlink. Simlinks not allowed"
     return None
 
 
-def validate_file_exists(repo: str, path: str) -> Optional[str]:
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+def validate_file_exists(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if not os.path.exists(resolved_path):
         return f"ERROR - File {path} does not exist. Please ensure the file exists."
     return None
 
 
-def validate_not_a_directory(repo: str, path: str) -> Optional[str]:
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+def validate_not_a_directory(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if os.path.isdir(resolved_path):
         return f"ERROR - File {path} is a directory. Please ensure the path references a file, not a directory."
     return None
 
 
-def validate_directory_exists(repo: str, path: str) -> Optional[str]:
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+def validate_directory_exists(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if not os.path.exists(resolved_path):
         return f"ERROR - Directory {path} does not exist. Please ensure the directory exists."
     return None
