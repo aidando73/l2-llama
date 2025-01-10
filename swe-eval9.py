@@ -4,6 +4,7 @@ import sys
 import json
 from subprocess import run
 from llama_agent.agent25 import run_agent
+from llama_stack_client import LlamaStackClient
 
 swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
@@ -46,6 +47,8 @@ for repo in unique_repos:
             check=True,
         )
 
+client = LlamaStackClient(base_url="http://localhost:5000")
+
 count = 0
 # Loop through all instances
 for i, row in df.iterrows():
@@ -58,7 +61,6 @@ for i, row in df.iterrows():
 
     # Checkout commit (force) and clean directory
     os.system(f"cd {dir} && git checkout {commit} --force && git clean -fdx")
-
 
     # Run the agent
     try:
