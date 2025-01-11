@@ -173,6 +173,10 @@ python -m swebench.harness.run_evaluation \
     --predictions_path swe-evals/v27-70B/all_preds.jsonl \
     --max_workers 16 \
     --run_id v27-70B
+
+eval_dir=$(realpath swe-evals)/v27-70B \
+    && mkdir -p $eval_dir \
+    && python -u swe-eval10.py $eval_dir
 ```
 
 Dependencies:
