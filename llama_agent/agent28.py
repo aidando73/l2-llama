@@ -250,8 +250,7 @@ def run_agent(
                         path = os.path.join(sandbox_dir, repo, tool_params["path"])
 
                         # Prompt for old content
-                        temp_message = message
-                        temp_message += "<|eot_id|>"
+                        temp_message = "<|eot_id|>"
                         temp_message += chat_message("tool", (
                             "The file {path} has the following content:\n"
                             "<file_content>\n"
@@ -266,7 +265,7 @@ def run_agent(
                         print("OLD_CONTENT: ")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
-                            content=temp_message,
+                            content=message + temp_message,
                         )
                         old_content = strip_code_block(response.content)
                         # Sometimes the agent will add additional text or no backticks
@@ -287,7 +286,7 @@ def run_agent(
                         print("NEW_CONTENT: ")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
-                            content=temp_message,
+                            content=message + temp_message,
                         )
                         new_content = strip_code_block(response.content)
                         temp_message += f"```\n{new_content}\n```"
@@ -302,8 +301,6 @@ def run_agent(
                         temp_message = temp_message.replace("<file_content>\n" + file_content + "\n</file_content>", "<file_content>[REDACTED]</file_content>")
 
                         message += temp_message
-
-
 
                         with open(path, "r") as f:
                             old_file_content = f.read()
