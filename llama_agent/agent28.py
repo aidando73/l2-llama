@@ -260,7 +260,9 @@ def run_agent(
                             "{file_content}\n"
                             "</file_content>\n"
                             "Please provide the old content to replace. "
-                            "Please format it it between triple backticks. "
+                            "Please ensure the old content is an exact match of the content in the file. "
+                            "Do not include any '...' or other placeholders. "
+                            "Please format it between triple backticks. "
                             "E.g., ```\nprint('Hello, world!')\n```"
                         )).format(path=tool_params["path"], file_content=file_content)
                         temp_message += header("assistant")
@@ -672,7 +674,7 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
     And then add it back in at the end
     """
     if dedent(old_content) == dedent(new_content):
-        raise AssertionError("Old content and new content are identical. File unchanged.")
+        raise AssertionError("Old content and new content are identical. File unchanged. Please provide new content that is different from the old content.")
 
     from math import inf
     def get_common_indentation(lines: list[str]) -> str:
@@ -720,4 +722,4 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
                 res += indent_char * common_indentation + line
             return "".join(old_file_content_lines[:i]) + res + "".join(old_file_content_lines[i + m:])
 
-    raise AssertionError("Old content not found in file")
+    raise AssertionError("Old content not found in file. Please ensure the old content is an exact match of the content in the file.")
