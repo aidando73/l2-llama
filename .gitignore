@@ -11,3 +11,5 @@ logs/
 prompt.txt
 edit_file-prompt.txt
 swe-evals/
+worker_0.log
+.DS_Store

@@ -1,7 +1,7 @@
 from datasets import load_dataset
 import os
 import sys
-from llama_agent.agent28 import run_agent
+from llama_agent.agent29 import run_agent
 from llama_stack_client import LlamaStackClient
 from dotenv import load_dotenv
 import pandas as pd
@@ -78,13 +78,14 @@ def main():
 
     print("Done running all instances")
 
-    # Copy the llama-stack.log file - from the line count of the log file to the end of the file
-    with open(llama_stack_log_path) as f:
-        for _ in range(llama_stack_line_count - 1):
-            next(f)
-        with open(os.path.join(args.eval_dir, "llama-stack.log"), "a") as f_out:
-            for line in f:
-                f_out.write(line)
+    if args.eval_dir:
+        # Copy the llama-stack.log file - from the line count of the log file to the end of the file
+        with open(llama_stack_log_path) as f:
+            for _ in range(llama_stack_line_count - 1):
+                next(f)
+            with open(os.path.join(args.eval_dir, "llama-stack.log"), "a") as f_out:
+                for line in f:
+                    f_out.write(line)
 
 def worker_process(args):
     queue, worker_id, eval_dir = args
