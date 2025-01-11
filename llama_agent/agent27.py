@@ -259,6 +259,7 @@ def run_agent(
                         print(f"Input tokens: {token_count(message)}")
                         print("OLD_CONTENT: ")
                         message += header("assistant")
+                        message += '```\n'
                         response = client.inference.completion(
                             model_id=MODEL_ID,
                             content=message,
@@ -280,6 +281,7 @@ def run_agent(
                         ))
                         message += "<|eot_id|>"
                         message += header("assistant")
+                        message += '```\n'
                         print(f"Input tokens: {token_count(message)}")
                         print("NEW_CONTENT: ")
                         response = client.inference.completion(
