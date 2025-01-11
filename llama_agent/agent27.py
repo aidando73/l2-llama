@@ -35,7 +35,7 @@ ITERATIONS = 15
 
 # 512 is the default for fireworks on Llama-stack
 # 4096 seems to be the max - https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct/discussions/6
-MAX_OUTPUT_TOKENS = 2048
+MAX_OUTPUT_TOKENS = 512
 
 sampling_params = SamplingParams(
     strategy="greedy",
