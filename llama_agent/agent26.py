@@ -33,14 +33,13 @@ import difflib
 MODEL_ID = "meta-llama/Llama-3.1-405B-Instruct-FP8"
 ITERATIONS = 15
 
-SANDBOX_DIR = os.path.join(REPO_DIR, "sandbox")
 tokenizer = Tokenizer.get_instance()
 formatter = ChatFormat(tokenizer)
 
 
 class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
     def gen(
-        self, problem_statement: str, repo: str, custom_tools: list[ToolDefinition]
+        self, problem_statement: str, sandbox_dir: str, repo: str, custom_tools: list[ToolDefinition]
     ) -> str:
         template_str = textwrap.dedent(
             """
@@ -123,7 +122,7 @@ class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
         )
 
         files_in_repo = "\n".join(
-            list_files_in_repo(os.path.join(SANDBOX_DIR, repo), depth=1)
+            list_files_in_repo(os.path.join(sandbox_dir, repo), depth=1)
         )
         return PromptTemplate(
             template_str.lstrip("\n"),
@@ -140,6 +139,7 @@ def run_agent(
     client: LlamaStackClient,
     repo: str,
     problem_statement: str,
+    sandbox_dir: Optional[str] = os.path.join(REPO_DIR, "sandbox"),
     eval_dir: Optional[str] = None,
     instance_id: Optional[str] = None,
 ) -> Tuple[Literal["changes_made", "no_changes_made"], str, Optional[str]]:
@@ -152,7 +152,7 @@ def run_agent(
 
     message = (
         L2SystemPromptGenerator()
-        .gen(problem_statement=problem_statement, repo=repo, custom_tools=TOOLS)
+        .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, custom_tools=TOOLS)
         .render()
     )
 
@@ -227,18 +227,20 @@ def run_agent(
                 # Llama needs to escape newlines and double quotes, it's easier to just prompt for the old and new content
                 if tool_name == "edit_file":
                     if (error := validate_param_exists("path", tool_params)
-                        or validate_path_in_sandbox(repo, tool_params["path"])
-                        or validate_not_symlink(repo, tool_params["path"])
-                        or validate_file_exists(repo, tool_params["path"])
-                        or validate_not_a_directory(repo, tool_params["path"])
+                        or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+                        or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+                        or validate_file_exists(sandbox_dir, repo, tool_params["path"])
+                        or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
                     ):
                         result, result_msg = ("error", error)
                     else:
-                        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
+                        path = os.path.join(sandbox_dir, repo, tool_params["path"])
+
+                        with open(path, "r") as f:
+                            file_content = f.read()
 
                         # Prompt for old content
-                        temp_message = message
-                        temp_message += "<|eot_id|>"
+                        temp_message = "<|eot_id|>"
                         temp_message += chat_message("tool", (
                             "The file {path} has the following content:\n"
                             "<file_content>\n"
@@ -253,7 +255,7 @@ def run_agent(
                         print("OLD_CONTENT: ")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
-                            content=temp_message,
+                            content=message + temp_message,
                         )
                         old_content = strip_code_block(response.content)
                         # Sometimes the agent will add additional text or no backticks
@@ -274,7 +276,7 @@ def run_agent(
                         print("NEW_CONTENT: ")
                         response = client.inference.completion(
                             model_id=MODEL_ID,
-                            content=temp_message,
+                            content=message + temp_message,
                         )
                         new_content = strip_code_block(response.content)
                         temp_message += f"```\n{new_content}\n```"
@@ -289,8 +291,6 @@ def run_agent(
                         temp_message = temp_message.replace("<file_content>\n" + file_content + "\n</file_content>", "<file_content>[REDACTED]</file_content>")
 
                         message += temp_message
-
-
 
                         with open(path, "r") as f:
                             old_file_content = f.read()
@@ -318,62 +318,68 @@ def run_agent(
                 elif tool_name == "view_file":
                     if (
                         error := validate_param_exists("path", tool_params)
-                        or validate_not_symlink(repo, tool_params["path"])
-                        or validate_path_in_sandbox(repo, tool_params["path"])
-                        or validate_file_exists(repo, tool_params["path"])
-                        or validate_not_a_directory(repo, tool_params["path"])
+                        or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+                        or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+                        or validate_file_exists(sandbox_dir, repo, tool_params["path"])
+                        or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
                     ):
-                        return ("error", error)
+                        result, result_msg = ("error", error)
+                    else:
+                        path = os.path.join(sandbox_dir, repo, tool_params["path"])
+                        with open(f"{path}", "r") as f:
+                            file_content = f.read()
 
-                    path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
-                    with open(f"{path}", "r") as f:
-                        file_content = f.read()
+                        # We ask the agent to only keep the relevant code from the file - to avoid long context
+                        # Hypothesis: It performs poorly when keeping the entire file in context
+                        temp_message = "<|begin_of_text|>"
+                        temp_message += header("system")
+                        temp_message += dedent("""\
+                            You are an expert software engineer. You're working in a repository called {repo}.
+                            You are solving the following problem:
 
-                    # We ask the agent to only keep the relevant code from the file - to avoid long context
-                    # Hypothesis: It performs poorly when keeping the entire file in context
-                    temp_message = "<|begin_of_text|>"
-                    temp_message += header("system")
-                    temp_message += dedent("""\
-                        You are an expert software engineer. You're working in a repository called {repo}.
-                        You are solving the following problem:
+                            <problem_statement>
+                            {problem_statement}
+                            </problem_statement>
 
-                        <problem_statement>
-                        {problem_statement}
-                        </problem_statement>
+                            You have viewed the following file which may or may not be relevant to the problem
+                            <file_content>
+                            {file_content}
+                            </file_content>
 
-                        You have viewed the following file which may or may not be relevant to the problem
-                        <file_content>
-                        {file_content}
-                        </file_content>
+                            Please determine whether the file is relevant to the problem. \
+                            If it is, please extract relevant snippets from the file and annotate them with key insights relevant to solving the problem. \
+                            If the file is not relevant, please do not include any information from the file.
+                        """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
+                        temp_message += "<|eot_id|>"
+                        temp_message += header("assistant")
+                        print(f"Input tokens: {token_count(temp_message)}")
+                        response = client.inference.completion(
+                            model_id=MODEL_ID,
+                            content=temp_message,
+                        )
 
-                        Please determine whether the file is relevant to the problem. \
-                        If it is, please extract relevant snippets from the file and annotate them with key insights relevant to solving the problem. \
-                        If the file is not relevant, please do not include any information from the file.
-                    """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
-                    temp_message += "<|eot_id|>"
-                    temp_message += header("assistant")
-                    print(f"Input tokens: {token_count(temp_message)}")
-                    response = client.inference.completion(
-                        model_id=MODEL_ID,
-                        content=temp_message,
-                    )
-
-                    message += "Result: File successfully viewed."
-                    message += "<|eot_id|>"
-                    message += header("assistant")
-                    message += response.content
-                    message += "<|eot_id|>"
-                    # We want to form an assistant response, so skip the remaining logic
-                    print("Result: File successfully viewed.")
-                    print("File analysis: " + magenta(response.content))
-                    continue
+                        message += "Result: File successfully viewed."
+                        message += "<|eot_id|>"
+                        message += header("assistant")
+                        message += response.content
+                        message += "<|eot_id|>"
+                        # We want to form an assistant response, so skip the remaining logic
+                        print("Result: File successfully viewed.")
+                        print("File analysis: " + magenta(response.content))
+                        continue
                 elif tool_name == "finish":
                     if not edit_made:
-                        result, result_msg = ("error", "ERROR - No changes made to the codebase. Please make changes to the codebase before calling this function.")
+                        result = "error"
+                        result_msg = (
+                            "ERROR - you have called finish() without making any changes. "
+                            "You have made a mistake somewhere. "
+                            "Please review everything you have done, identify where you made a mistake and try again. "
+                            "This time, ensure you make a successful edit_file call."
+                        )
                     else:
                         result, result_msg = ("success", "Task marked as finished")
                 else:
-                    result, result_msg = execute_tool_call(tool_name, tool_params, repo)
+                    result, result_msg = execute_tool_call(tool_name, tool_params, sandbox_dir, repo)
             except Exception as e:
                 result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
@@ -470,7 +476,7 @@ TOOLS = [
 
 
 def execute_tool_call(
-    tool_name: str, tool_params: dict[str, str], repo: str
+    tool_name: str, tool_params: dict[str, str], sandbox_dir: str, repo: str
 ) -> Union[Tuple[Literal["success"], str], Tuple[Literal["error"], str]]:
     """
     Execute a tool call and return a message indicating the result of the tool call.
@@ -487,13 +493,13 @@ def execute_tool_call(
     if tool_name == "list_files":
         if (
             error := validate_param_exists("path", tool_params)
-            or validate_not_symlink(repo, tool_params["path"])
-            or validate_path_in_sandbox(repo, tool_params["path"])
-            or validate_directory_exists(repo, tool_params["path"])
+            or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+            or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+            or validate_directory_exists(sandbox_dir, repo, tool_params["path"])
         ):
             return ("error", error)
 
-        path = os.path.join(SANDBOX_DIR, repo, tool_params["path"])
+        path = os.path.join(sandbox_dir, repo, tool_params["path"])
         files = list_files_in_repo(path, depth=1)
         return ("success", "\n".join(files))
 
@@ -630,7 +636,7 @@ def validate_param_exists(
     return None
 
 
-def validate_path_in_sandbox(repo: str, path: str) -> Optional[str]:
+def validate_path_in_sandbox(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
     """
     Validate that a path stays within the sandbox directory.
 
@@ -641,8 +647,8 @@ def validate_path_in_sandbox(repo: str, path: str) -> Optional[str]:
         Optional[str]: Error message if path is invalid, None if valid
     """
     # Resolve the absolute path after translation to catch any ../ tricks
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
-    sandbox_path = os.path.abspath(SANDBOX_DIR)
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
+    sandbox_path = os.path.abspath(sandbox_dir)
 
     if not resolved_path.startswith(sandbox_path):
         # From the agent's perspective, any paths not in the sandbox don't exist
@@ -650,29 +656,29 @@ def validate_path_in_sandbox(repo: str, path: str) -> Optional[str]:
     return None
 
 
-def validate_not_symlink(repo: str, path: str) -> Optional[str]:
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+def validate_not_symlink(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if os.path.islink(resolved_path):
         return f"ERROR - File {path} is a symlink. Simlinks not allowed"
     return None
 
 
-def validate_file_exists(repo: str, path: str) -> Optional[str]:
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+def validate_file_exists(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if not os.path.exists(resolved_path):
         return f"ERROR - File {path} does not exist. Please ensure the file exists."
     return None
 
 
-def validate_not_a_directory(repo: str, path: str) -> Optional[str]:
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+def validate_not_a_directory(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if os.path.isdir(resolved_path):
         return f"ERROR - File {path} is a directory. Please ensure the path references a file, not a directory."
     return None
 
 
-def validate_directory_exists(repo: str, path: str) -> Optional[str]:
-    resolved_path = os.path.abspath(os.path.join(SANDBOX_DIR, repo, path))
+def validate_directory_exists(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if not os.path.exists(resolved_path):
         return f"ERROR - Directory {path} does not exist. Please ensure the directory exists."
     return None
