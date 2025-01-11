@@ -163,7 +163,7 @@ def run_agent(
 
     message = (
         L2SystemPromptGenerator()
-        .gen(problem_statement=problem_statement, repo=repo, custom_tools=TOOLS)
+        .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, custom_tools=TOOLS)
         .render()
     )
 
