@@ -333,50 +333,50 @@ def run_agent(
                         or validate_file_exists(sandbox_dir, repo, tool_params["path"])
                         or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
                     ):
-                        return ("error", error)
+                        result, result_msg = ("error", error)
+                    else:
+                        path = os.path.join(sandbox_dir, repo, tool_params["path"])
+                        with open(f"{path}", "r") as f:
+                            file_content = f.read()
 
-                    path = os.path.join(sandbox_dir, repo, tool_params["path"])
-                    with open(f"{path}", "r") as f:
-                        file_content = f.read()
+                        # We ask the agent to only keep the relevant code from the file - to avoid long context
+                        # Hypothesis: It performs poorly when keeping the entire file in context
+                        temp_message = "<|begin_of_text|>"
+                        temp_message += header("system")
+                        temp_message += dedent("""\
+                            You are an expert software engineer. You're working in a repository called {repo}.
+                            You are solving the following problem:
 
-                    # We ask the agent to only keep the relevant code from the file - to avoid long context
-                    # Hypothesis: It performs poorly when keeping the entire file in context
-                    temp_message = "<|begin_of_text|>"
-                    temp_message += header("system")
-                    temp_message += dedent("""\
-                        You are an expert software engineer. You're working in a repository called {repo}.
-                        You are solving the following problem:
+                            <problem_statement>
+                            {problem_statement}
+                            </problem_statement>
 
-                        <problem_statement>
-                        {problem_statement}
-                        </problem_statement>
+                            You have viewed the following file which may or may not be relevant to the problem
+                            <file_content>
+                            {file_content}
+                            </file_content>
 
-                        You have viewed the following file which may or may not be relevant to the problem
-                        <file_content>
-                        {file_content}
-                        </file_content>
+                            Please determine whether the file is relevant to the problem. \
+                            If it is, please extract relevant snippets from the file and annotate them with key insights relevant to solving the problem. \
+                            If the file is not relevant, please do not include any information from the file.
+                        """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
+                        temp_message += "<|eot_id|>"
+                        temp_message += header("assistant")
+                        print(f"Input tokens: {token_count(temp_message)}")
+                        response = client.inference.completion(
+                            model_id=MODEL_ID,
+                            content=temp_message,
+                        )
 
-                        Please determine whether the file is relevant to the problem. \
-                        If it is, please extract relevant snippets from the file and annotate them with key insights relevant to solving the problem. \
-                        If the file is not relevant, please do not include any information from the file.
-                    """).format(repo=repo, problem_statement=problem_statement, file_content=file_content)
-                    temp_message += "<|eot_id|>"
-                    temp_message += header("assistant")
-                    print(f"Input tokens: {token_count(temp_message)}")
-                    response = client.inference.completion(
-                        model_id=MODEL_ID,
-                        content=temp_message,
-                    )
-
-                    message += "Result: File successfully viewed."
-                    message += "<|eot_id|>"
-                    message += header("assistant")
-                    message += response.content
-                    message += "<|eot_id|>"
-                    # We want to form an assistant response, so skip the remaining logic
-                    print("Result: File successfully viewed.")
-                    print("File analysis: " + magenta(response.content))
-                    continue
+                        message += "Result: File successfully viewed."
+                        message += "<|eot_id|>"
+                        message += header("assistant")
+                        message += response.content
+                        message += "<|eot_id|>"
+                        # We want to form an assistant response, so skip the remaining logic
+                        print("Result: File successfully viewed.")
+                        print("File analysis: " + magenta(response.content))
+                        continue
                 elif tool_name == "finish":
                     if not edit_made:
                         result = "error"
