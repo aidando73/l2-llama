@@ -6,6 +6,8 @@ from subprocess import run
 from llama_agent.agent27 import run_agent
 from llama_stack_client import LlamaStackClient
 import traceback
+import multiprocessing as mp
+from argparse import ArgumentParser
 
 swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
@@ -92,14 +94,15 @@ def worker_process(args):
         repo_name = row['repo'].split('/')[1]
         sandbox_dir = os.path.join(SANDBOX_DIR, f"worker_{worker_id}")
         repo_path = os.path.join(sandbox_dir, repo_name)
-        run(
-            f"git clone https://github.com/{row['repo']}.git {repo_path}",
-            shell=True,
-            check=True,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            bufsize=1,
-        )
+        if not os.path.exists(repo_path):
+            run(
+                f"git clone https://github.com/{row['repo']}.git {repo_path}",
+                shell=True,
+                check=True,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                bufsize=1,
+            )
 
         commit = row['base_commit']
 
