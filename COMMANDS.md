@@ -177,6 +177,10 @@ python -m swebench.harness.run_evaluation \
 eval_dir=$(realpath swe-evals)/v27-70B-workers-4 \
     && mkdir -p $eval_dir \
     && python -u swe-eval10.py --eval_dir $eval_dir
+
+eval_dir=$(realpath evals/v28-70B-no-dilute) && \
+mkdir -p $eval_dir && \
+python eval9.py --eval_dir $eval_dir
 ```
 
 Dependencies:
