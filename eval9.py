@@ -58,6 +58,11 @@ def main():
             print(f"Filtering out {len(ran_instances)} already ran instances")
             df = df[~df["instance_id"].isin(ran_instances)]
 
+    # Get line count of llama-stack.log
+    llama_stack_log_path = os.path.expanduser("~/dev/llama-stack/llama-stack.log")
+    with open(llama_stack_log_path) as f:
+        llama_stack_line_count = sum(1 for line in f)
+
     # Create a pool of workers
     print(f"Creating pool of {num_workers} workers")
     with mp.Pool(num_workers) as pool:
@@ -73,6 +78,13 @@ def main():
 
     print("Done running all instances")
 
+    # Copy the llama-stack.log file - from the line count of the log file to the end of the file
+    with open(llama_stack_log_path) as f:
+        for _ in range(llama_stack_line_count - 1):
+            next(f)
+        with open(os.path.join(args.eval_dir, "llama-stack.log"), "a") as f_out:
+            for line in f:
+                f_out.write(line)
 
 def worker_process(args):
     queue, worker_id, eval_dir = args
