@@ -249,6 +249,9 @@ def run_agent(
                     else:
                         path = os.path.join(sandbox_dir, repo, tool_params["path"])
 
+                        with open(path, "r") as f:
+                            file_content = f.read()
+
                         # Prompt for old content
                         temp_message = "<|eot_id|>"
                         temp_message += chat_message("tool", (
