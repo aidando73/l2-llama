@@ -174,7 +174,7 @@ python -m swebench.harness.run_evaluation \
     --max_workers 16 \
     --run_id v27-70B
 
-eval_dir=$(realpath swe-evals)/v27-70B \
+eval_dir=$(realpath swe-evals)/v27-70B-workers-4 \
     && mkdir -p $eval_dir \
     && python -u swe-eval10.py $eval_dir
 ```
