@@ -93,7 +93,8 @@ def worker_process(args):
     if eval_dir is None:
         log_path = os.path.join(SCRIPT_DIR, f"worker_{worker_id}.log")
     else:
-        log_path = os.path.join(eval_dir, f"worker_{worker_id}.log")
+        os.makedirs(os.path.join(eval_dir, "logs"), exist_ok=True)
+        log_path = os.path.join(eval_dir, "logs", f"worker_{worker_id}.log")
     sys.stdout = open(log_path, "w", buffering=1)
     sys.stderr = sys.stdout
 
