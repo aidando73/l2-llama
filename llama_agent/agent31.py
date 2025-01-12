@@ -414,7 +414,7 @@ def execute_tool_call(
             
             insert_line = tool_params["insert_line"]
             new_str = tool_params["new_str"]
-            new_content = file_content[:insert_line] + [new_str] + file_content[insert_line:]
+            new_content = file_content[:insert_line] + [new_str + "\n"] + file_content[insert_line:]
 
             with open(f"{path}", "w") as f:
                 f.write("".join(new_content))
