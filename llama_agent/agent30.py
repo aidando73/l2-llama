@@ -298,7 +298,7 @@ TOOLS = [
     ),
     ToolDefinition(
         tool_name="edit_file",
-        description="Edit a file. Specify the path to the file to edit. You will be prompted for the old and new content to edit the file.",
+        description="Edit a file. Specify the path to the file to edit.",
         parameters={
             "path": ToolParamDefinition(
                 param_type="string",
@@ -307,12 +307,12 @@ TOOLS = [
             ),
             "old_str": ToolParamDefinition(
                 param_type="string",
-                description="The string in the file at `path` to replace. If not specified, the entire file will be replaced by new_str",
-                required=False,
+                description="The string in the file at `path` to replace. Must be non-empty.",
+                required=True,
             ),
             "new_str": ToolParamDefinition(
                 param_type="string",
-                description="The new string to write to the file. If the old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
+                description="The new string to write to the file.",
                 required=True,
             ),
         },
@@ -369,37 +369,36 @@ def execute_tool_call(
             error := validate_param_exists("path", tool_params)
             or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
             or validate_param_exists("new_str", tool_params)
+            or validate_param_exists("old_str", tool_params)
             or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
             or validate_file_exists(sandbox_dir, repo, tool_params["path"])
             or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
         ):
             return ("error", error)
 
+        if tool_params["old_str"] == "":
+            return ("error", "ERROR - old_str must be non-empty")
+
         path = os.path.join(sandbox_dir, repo, tool_params["path"])
-        if "old_str" in tool_params and tool_params["old_str"] != "":
-            with open(f"{path}", "r") as f:
-                file_content = f.read()
-            with open(f"{path}", "w") as f:
-                old_str = tool_params["old_str"]
-                new_str = tool_params["new_str"]
-                new_content = file_content.replace(old_str, new_str)
-                f.write(new_content)
-            diff = list(
-                difflib.unified_diff(
-                    file_content.splitlines(keepends=True),
-                    new_content.splitlines(keepends=True),
-                    fromfile="before",
-                    tofile="after",
-                )
+        with open(f"{path}", "r") as f:
+            file_content = f.read()
+        with open(f"{path}", "w") as f:
+            old_str = tool_params["old_str"]
+            new_str = tool_params["new_str"]
+            new_content = file_content.replace(old_str, new_str)
+            f.write(new_content)
+        diff = list(
+            difflib.unified_diff(
+                file_content.splitlines(keepends=True),
+                new_content.splitlines(keepends=True),
+                fromfile="before",
+                tofile="after",
             )
-            if len(diff) == 0:
-                return ("error", "ERROR - No changes made to file")
-            else:
-                return ("success", "File successfully updated\n" + "\n".join(diff))
+        )
+        if len(diff) == 0:
+            return ("error", "ERROR - No changes made to file")
         else:
-            with open(f"{path}", "w") as f:
-                f.write(tool_params["new_str"])
-            return ("success", "File successfully updated")
+            return ("success", "File successfully updated\n" + "\n".join(diff))
     elif tool_name == "view_file":
         if (
             error := validate_param_exists("path", tool_params)
