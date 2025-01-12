@@ -742,20 +742,21 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
                 - indent_char (Optional[str]): The character type of the indentation, either " " or "\t" or '' if no whitespace
                 - common_indentation (int): The common indentation of the lines
         """
-        common_indentation = inf
-        indent_char = None
+        # Find minimum indentation
+        whitespace_count = []
         for line in lines:
-            # Assume tabs or spaces only
-            if whitespace := re.match(r'^[ \t]+', line):
-                if indent_char is None:
-                    # Just get the first whitespace character we encounter
-                    indent_char = whitespace.group(0)[0]
-                if len(whitespace.group(0)) < common_indentation:
-                    common_indentation = len(whitespace.group(0))
+            if match := re.match(r'^[ \t]+', line):
+                whitespace_count.append(len(match.group(0)))
             else:
-                # If we encounter a line without whitespace, then there's no whitespace to remove
-                return ('', 0)
-        return indent_char, common_indentation
+                whitespace_count.append(0)
+        common_indentation = min(whitespace_count)
+
+        if common_indentation == 0:
+            return '', 0
+        else:
+            # If there is common indentation, we can just find the indent_char on the first line
+            indent_char = lines[0][0]
+            return indent_char, common_indentation
 
     old_file_content_lines = old_file_content.splitlines(keepends=True)
     old_content_lines = old_content.splitlines(keepends=True)
@@ -764,6 +765,7 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
         return old_file_content
 
     m = len(old_content_lines)
+    print(f"m: {m}")
     for i in range(len(old_file_content_lines) - m + 1):
         lines = old_file_content_lines[i:i + m]
         indent_char, common_indentation = get_common_indentation(lines)
