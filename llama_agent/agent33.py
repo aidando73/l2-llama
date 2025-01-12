@@ -397,7 +397,7 @@ def run_agent(
             sampling_params=sampling_params,
         )
 
-        print(magenta(response.content))
+        print("Assistant: " + magenta(response.content))
 
         message += response.content
         message += f"<|eot_id|>"
@@ -406,8 +406,9 @@ def run_agent(
             file_content = f.read()
         
         response_content = response.content
-        i = 1
+        i = 0
         while old_content_match := re.search(r"<old_content>(.*?)</old_content>", response_content, re.DOTALL):
+            i += 1
             old_content = old_content_match.group(1)
             response_content = response_content[old_content_match.end():]
 
@@ -418,19 +419,19 @@ def run_agent(
                 response_content = response_content[new_content_match.end():]
             else:
                 msg = f"ERROR - edit {i} - new_content not found in response. Please ensure there is a following <new_content></new_content> tag for every <old_content></old_content> tag."
-                print(red(msg))
+                print("System: " + red(msg))
                 message += chat_message("system", msg)
                 continue
 
             if old_content not in file_content:
                 msg = f"ERROR - edit {i} - old_content not found in file. Please ensure that old_content is an exact match of the content you want to replace."
-                print(red(msg))
+                print("System: " + red(msg))
                 message += chat_message("system", msg)
                 continue
 
             if old_content == new_content:
                 msg = f"ERROR - edit {i} - old_content and new_content are the same. Please ensure that new_content is different from old_content."
-                print(red(msg))
+                print("System: " + red(msg))
                 message += chat_message("system", msg)
                 continue
 
@@ -447,7 +448,7 @@ def run_agent(
                 )
             )
             msg = "File successfully updated:\n" + "\n".join(diff)
-            print(green("File successfully updated:"))
+            print("System: " + green("File successfully updated:"))
             print("\n".join(diff))
             message += chat_message("system", msg)
             file_edited = True
@@ -455,13 +456,13 @@ def run_agent(
         if "<|finish|>" in response.content:
             if file_edited:
                 msg = "Task marked as finished"
-                print(blue(msg))
+                print("System: " + blue(msg))
                 message += chat_message("system", msg)
                 finished = True
                 break
             else:
                 msg = "ERROR - No changes made to file. Please ensure you have made at least one change to the file."
-                print(red(msg))
+                print("System: " + red(msg))
                 message += chat_message("system", msg)
     
     if finished:
