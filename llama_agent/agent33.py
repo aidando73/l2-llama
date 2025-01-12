@@ -251,7 +251,6 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
         return PromptTemplate(
             template_str.lstrip("\n"),
             {
-                "custom_tools": [t.model_dump() for t in PHASE2_TOOLS],
                 "problem_statement": problem_statement,
                 "repo": repo,
                 "file_path": file_path,
@@ -392,25 +391,12 @@ def run_agent(
         if finished:
             break
         message += header("assistant")
-        message += "ANALYSE:\n"
         print(f"Input tokens: {token_count(message)}")
         response = client.inference.completion(
             model_id=MODEL_ID,
             content=message,
             sampling_params=sampling_params,
         )
-
-        if "EXECUTE:" in response.content:
-            # Sometimes the agent will respond with the EXECUTE statement
-            # we want it to respond in separate turns so it's easier to pre-empt the model
-            # and parse the tool call
-            # print("DEBUG", response.content)
-            analyse_statement = response.content[: response.content.find("EXECUTE:")]
-            analyse_statement = analyse_statement.rstrip()
-        else:
-            analyse_statement = response.content
-        message += analyse_statement
-        message += f"<|eot_id|>"
 
         print("ANALYSE:")
         print(magenta(analyse_statement))
