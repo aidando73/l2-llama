@@ -96,7 +96,12 @@ def worker_process(args):
     else:
         os.makedirs(os.path.join(eval_dir, "logs"), exist_ok=True)
         log_path = os.path.join(eval_dir, "logs", f"worker_{worker_id}.log")
-    sys.stdout = open(log_path, "w", buffering=1)
+        
+    if worker_id == 0:
+        # Only worker 0 will print to stdout as well as the log file
+        sys.stdout = TeeOutput(log_path)
+    else:
+        sys.stdout = open(log_path, "w", buffering=1)
     sys.stderr = sys.stdout
 
     print(f"Worker {worker_id} started")
@@ -323,6 +328,20 @@ def validate_instance(row, sandbox_dir, eval_dir=None):
         bufsize=1,
     )
 
+# Create a custom file-like object that writes to both file and stdout
+class TeeOutput:
+    def __init__(self, file_path):
+        self.file = open(file_path, "w", buffering=1)
+        self.stdout = sys.stdout
+
+    def write(self, data):
+        self.file.write(data)
+        self.stdout.write(data)
+        self.stdout.flush()
+
+    def flush(self):
+        self.file.flush()
+        self.stdout.flush()
 
 if __name__ == "__main__":
     main()
