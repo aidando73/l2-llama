@@ -768,14 +768,14 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
         return old_file_content
 
     m = len(old_content_lines)
-    # print("Indentation aware edit")
-    # print(f"m: {m}")
+    print("Indentation aware edit")
+    print(f"m: {m}")
     for i in range(len(old_file_content_lines) - m + 1):
         lines = old_file_content_lines[i:i + m]
         indent_char, common_indentation = get_common_indentation(lines)
         indent_char_repr = "\\s" if indent_char == " " else "\\t"
-        # print(f"i: {i}" + "-" * 100)
-        # print(f"indent_char: {indent_char_repr}, common_indentation: {common_indentation}")
+        print(f"i: {i}" + "-" * 100)
+        print(f"indent_char: {indent_char_repr}, common_indentation: {common_indentation}")
 
         # Check if the old content is in the dedented content
         content_dedented = dedent("".join(lines))
