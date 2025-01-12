@@ -128,6 +128,8 @@ class Phase1PromptGenerator(PromptTemplateGeneratorBase):
             EXECUTE:
             [Function call in the correct format specified above]<|eot_id|>
 
+            If you have located the relevant file, call the `pick_file` function with the path to the file. \
+            E.g., `pick_file(path="src/file.py")`
             <|eot_id|>
             """
         )
@@ -425,8 +427,11 @@ def run_agent(
     message = Phase2PromptGenerator() \
         .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, file_path=file_chosen) \
         .render()
-
+    
+    finished = False
     for i in range(PHASE2_ITERATIONS):
+        if finished:
+            break
         message += header("assistant")
         message += "ANALYSE:\n"
         print(f"Input tokens: {token_count(message)}")
@@ -435,7 +440,6 @@ def run_agent(
             content=message,
             sampling_params=sampling_params,
         )
-
 
         if "EXECUTE:" in response.content:
             # Sometimes the agent will respond with the EXECUTE statement
@@ -487,7 +491,7 @@ def run_agent(
             print("Executing tool call: " + cyan(msg))
 
             try:
-                result, result_msg = execute_phase_2_tool_call(tool_name, tool_params, sandbox_dir, repo, file_path)
+                result, result_msg = execute_phase_2_tool_call(tool_name, tool_params, sandbox_dir, repo, file_chosen)
             except Exception as e:
                 result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
@@ -502,6 +506,7 @@ def run_agent(
             message += f"<|eot_id|>"
 
             if result == "success" and tool_name == "finish":
+                finished = True
                 break
     
     if eval_dir:
