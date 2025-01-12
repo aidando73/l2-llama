@@ -22,7 +22,7 @@ from llama_models.llama3.prompt_templates.system_prompts import (
 )
 from llama_agent.utils.file_tree import list_files_in_repo
 from llama_agent import REPO_DIR
-from llama_agent.utils.ansi import red, yellow, magenta, blue, cyan
+from llama_agent.utils.ansi import red, yellow, magenta, blue, cyan, green
 from subprocess import run
 from textwrap import dedent
 import textwrap
@@ -406,7 +406,7 @@ def run_agent(
             file_content = f.read()
         
         old_content_pattern = r"<old_content>(.*?)</old_content>"
-        old_content_match = re.search(old_content_pattern, response.content)
+        old_content_match = re.search(old_content_pattern, response.content, re.DOTALL)
         if old_content_match:
             old_content = old_content_match.group(1)
             if old_content not in file_content:
@@ -416,7 +416,7 @@ def run_agent(
                 continue
 
             new_content_pattern = r"<new_content>(.*?)</new_content>"
-            new_content_match = re.search(new_content_pattern, response.content)
+            new_content_match = re.search(new_content_pattern, response.content, re.DOTALL)
             if new_content_match:
                 new_content = new_content_match.group(1)
 
@@ -432,14 +432,15 @@ def run_agent(
                 
                 diff = list(
                     difflib.unified_diff(
-                        prev_content.splitlines(keepends=True),
+                        file_content.splitlines(keepends=True),
                         new_content.splitlines(keepends=True),
                         fromfile="before",
                         tofile="after",
                     )
                 )
                 msg = "File successfully updated:\n" + "\n".join(diff)
-                print(green(msg))
+                print(green("File successfully updated:"))
+                print("\n".join(diff))
                 message += chat_message("system", msg)
                 file_edited = True
         
