@@ -148,7 +148,6 @@ def worker_process(args):
                 patch = row["patch"]
                 diff_pattern = r"diff --git a/.* b/(.*)"
                 relevant_file = re.findall(diff_pattern, patch)[0]
-                print(f"Skipping phase 1 and giving phase 2 the relevant file: {relevant_file}")
             else:
                 relevant_file = None
 

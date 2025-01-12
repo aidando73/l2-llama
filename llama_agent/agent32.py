@@ -321,7 +321,10 @@ def run_agent(
     if relevant_file:
         # This skips phase 1 and gives phase 2 the relevant file
         # Useful for evals where we want to test phase 2 specifically
+        print(f"Skipping phase 1 and giving phase 2 the relevant file: {relevant_file}")
         file_chosen = relevant_file
+    else:
+        file_chosen = None
 
     """
     PHASE 1: Locate the relevant file
@@ -331,7 +334,6 @@ def run_agent(
         .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, custom_tools=PHASE1_TOOLS) \
         .render()
 
-    file_chosen = None
     for i in range(PHASE1_ITERATIONS):
         if file_chosen:
             break
