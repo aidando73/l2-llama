@@ -169,10 +169,11 @@ eval_dir=$(realpath swe-evals)/v27-70B \
     && python -u swe-eval9.py $eval_dir \
     | tee -a $eval_dir/harness.log
 
+version=v33.7 && \
 python -m swebench.harness.run_evaluation \
-    --predictions_path swe-evals/v27-70B/all_preds.jsonl \
+    --predictions_path swe-evals/$version/all_preds.jsonl \
     --max_workers 16 \
-    --run_id v27-70B
+    --run_id $version
 
 eval_dir=$(realpath swe-evals)/v27-70B-workers-4 \
     && mkdir -p $eval_dir \
@@ -189,6 +190,10 @@ version=v32.2-skip-phase-1_2 && \
 eval_dir=$(realpath evals/$version) && \
 mkdir -p $eval_dir && \
 python eval10.py --eval_dir $eval_dir --skip_phase_1
+
+eval_dir=$(realpath swe-evals)/v33.7 \
+    && mkdir -p $eval_dir \
+    && python -u swe-eval10.py --eval_dir $eval_dir
 ```
 
 Dependencies:

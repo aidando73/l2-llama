@@ -3,7 +3,7 @@ import os
 import sys
 import json
 from subprocess import run
-from llama_agent.agent27 import run_agent
+from llama_agent.agent33 import run_agent
 from llama_stack_client import LlamaStackClient
 import traceback
 import multiprocessing as mp
