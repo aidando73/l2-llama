@@ -300,6 +300,37 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             ```
 
             Please make the necessary changes to the file to fix the problem. \
+            
+            Important: Always provide complete, specific code in your responses. \
+            Do not use placeholders, ellipsis (...), or comments like "# Existing implementation here". \
+            Every code modification must be explicit and complete.
+
+            BAD EXAMPLE (DO NOT DO THIS):
+            <old_content>
+                def process_data(self):
+                    # existing implementation
+                    ...
+            </old_content>
+
+            <new_content>
+                def process_data(self):
+                    # implementation here
+                    ...
+            </new_content>
+
+            GOOD EXAMPLE (DO THIS):
+            <old_content>
+                def process_data(self):
+                    data = self.get_data()
+                    return data.process()
+            </old_content>
+
+            <new_content>
+                def process_data(self):
+                    data = self.get_data()
+                    validated_data = self.validate_data(data)
+                    return validated_data.process()
+            </new_content>
 
             Before using the <|finish|> tag, confirm that:
             1. All changes directly address the problem statement
