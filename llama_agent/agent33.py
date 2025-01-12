@@ -387,9 +387,8 @@ def run_agent(
         .render()
     
     finished = False
+    file_edited = False
     for i in range(PHASE2_ITERATIONS):
-        if finished:
-            break
         message += header("assistant")
         print(f"Input tokens: {token_count(message)}")
         response = client.inference.completion(
@@ -400,6 +399,62 @@ def run_agent(
 
         print(magenta(response.content))
 
+        message += response.content
+        message += f"<|eot_id|>"
+
+        with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
+            file_content = f.read()
+        
+        old_content_pattern = r"<old_content>(.*?)</old_content>"
+        old_content_match = re.search(old_content_pattern, response.content)
+        if old_content_match:
+            old_content = old_content_match.group(1)
+            if old_content not in file_content:
+                msg = f"ERROR - old_content not found in file. Please ensure that old_content is an exact match of the content you want to replace."
+                print(red(msg))
+                message += chat_message("system", msg)
+                continue
+
+            new_content_pattern = r"<new_content>(.*?)</new_content>"
+            new_content_match = re.search(new_content_pattern, response.content)
+            if new_content_match:
+                new_content = new_content_match.group(1)
+
+                if old_content == new_content:
+                    msg = f"ERROR - old_content and new_content are the same. Please ensure that new_content is different from old_content."
+                    print(red(msg))
+                    message += chat_message("system", msg)
+                    continue
+
+                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                    new_content = file_content.replace(old_content, new_content)
+                    f.write(new_content)
+                
+                diff = list(
+                    difflib.unified_diff(
+                        prev_content.splitlines(keepends=True),
+                        new_content.splitlines(keepends=True),
+                        fromfile="before",
+                        tofile="after",
+                    )
+                )
+                msg = "File successfully updated:\n" + "\n".join(diff)
+                print(green(msg))
+                message += chat_message("system", msg)
+                file_edited = True
+        
+        if "<|finish|>" in response.content:
+            if file_edited:
+                msg = "Task marked as finished"
+                print(blue(msg))
+                message += chat_message("system", msg)
+                finished = True
+                break
+            else:
+                msg = "ERROR - No changes made to file. Please ensure you have made at least one change to the file."
+                print(red(msg))
+                message += chat_message("system", msg)
+    
     if finished:
         print(blue("Agent marked as finished"))
     else:
