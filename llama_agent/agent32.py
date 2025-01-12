@@ -659,6 +659,13 @@ def execute_phase_2_tool_call(
         path = os.path.join(sandbox_dir, repo, file_path)
         with open(f"{path}", "r") as f:
             file_content = f.read()
+        
+        if tool_params["old_str"] not in file_content:
+            return ("error", "ERROR - old_str not found in file. Please ensure that old_str is an exact match of the content you want to replace.")
+
+        if tool_params["old_str"] == tool_params["new_str"]:
+            return ("error", "ERROR - old_str and new_str are the same. Please ensure that new_str is different from old_str.")
+
         with open(f"{path}", "w") as f:
             old_str = tool_params["old_str"]
             new_str = tool_params["new_str"]
