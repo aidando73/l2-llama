@@ -385,10 +385,22 @@ def execute_tool_call(
                 new_str = tool_params["new_str"]
                 new_content = file_content.replace(old_str, new_str)
                 f.write(new_content)
+            diff = list(
+                difflib.unified_diff(
+                    file_content.splitlines(keepends=True),
+                    new_content.splitlines(keepends=True),
+                    fromfile="before",
+                    tofile="after",
+                )
+            )
+            if len(diff) == 0:
+                return ("error", "ERROR - No changes made to file")
+            else:
+                return ("success", "File successfully updated\n" + "\n".join(diff))
         else:
             with open(f"{path}", "w") as f:
                 f.write(tool_params["new_str"])
-        return ("success", "File successfully updated")
+            return ("success", "File successfully updated")
     elif tool_name == "view_file":
         if (
             error := validate_param_exists("path", tool_params)
