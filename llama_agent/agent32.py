@@ -312,11 +312,17 @@ def run_agent(
     client: LlamaStackClient,
     repo: str,
     problem_statement: str,
+    relevant_file: Optional[str] = None,
     sandbox_dir: Optional[str] = os.path.join(REPO_DIR, "sandbox"),
     eval_dir: Optional[str] = None,
     instance_id: Optional[str] = None,
 ) -> Tuple[Literal["changes_made", "no_changes_made"], str, Optional[str]]:
     
+    if relevant_file:
+        # This skips phase 1 and gives phase 2 the relevant file
+        # Useful for evals where we want to test phase 2 specifically
+        file_chosen = relevant_file
+
     """
     PHASE 1: Locate the relevant file
     """

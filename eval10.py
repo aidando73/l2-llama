@@ -32,6 +32,7 @@ def main():
         help="Number of instances to run. If eval_dir is not defined, will run only 1 instance",
     )
     parser.add_argument("--num_workers", type=int, required=False, default=4)
+    parser.add_argument("--skip_phase_1", action="store_true", required=False, default=False)
     args = parser.parse_args()
 
     df = pd.read_parquet("test_data8.parquet")
@@ -87,7 +88,7 @@ def main():
         log_thread.start()
 
         pool.map(
-            worker_process, [(job_queue, i, args.eval_dir) for i in range(num_workers)]
+            worker_process, [(job_queue, i, args.eval_dir, args.skip_phase_1) for i in range(num_workers)]
         )
 
         # Signal the log thread to stop
@@ -106,7 +107,7 @@ def main():
                     f_out.write(line)
 
 def worker_process(args):
-    queue, worker_id, eval_dir = args
+    queue, worker_id, eval_dir, skip_phase_1 = args
 
     # Redirect stdout to a file
     if eval_dir is None:
@@ -143,10 +144,19 @@ def worker_process(args):
         )
 
         try:
+            if skip_phase_1:
+                patch = row["patch"]
+                diff_pattern = r"diff --git a/.* b/(.*)"
+                relevant_file = re.findall(diff_pattern, patch)[0]
+                print(f"Skipping phase 1 and giving phase 2 the relevant file: {relevant_file}")
+            else:
+                relevant_file = None
+
             run_agent(
                 client=client,
                 repo=repo_name,
                 problem_statement=row["problem_statement"],
+                relevant_file=relevant_file,
                 eval_dir=eval_dir,
                 instance_id=row["instance_id"],
                 sandbox_dir=sandbox_dir,
