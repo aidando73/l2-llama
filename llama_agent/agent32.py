@@ -35,6 +35,8 @@ MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 # 4096 seems to be the max - https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct/discussions/6
 MAX_OUTPUT_TOKENS = 512
 
+PHASE1_ITERATIONS = 10
+
 sampling_params = SamplingParams(
     strategy="greedy",
     max_tokens=MAX_OUTPUT_TOKENS,
@@ -254,7 +256,7 @@ def run_agent(
         print("Executing tool call: " + cyan(msg))
 
         try:
-            result, result_msg = execute_tool_call(tool_name, tool_params, sandbox_dir, repo)
+            result, result_msg = execute_phase_1_tool_call(tool_name, tool_params, sandbox_dir, repo)
         except Exception as e:
             result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
@@ -377,3 +379,71 @@ def execute_phase_1_tool_call(
         raise NotImplementedError("Phase 1 tool call not implemented")
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
+    
+def display_tool_params(tool_params: dict[str, str]):
+    return (
+        "("
+        + ", ".join(
+            [
+                param_name + '="' + str(param_value) + '"'
+                for param_name, param_value in tool_params.items()
+            ]
+        )
+        + ")"
+    )
+
+
+def validate_param_exists(
+    param_name: str, tool_params: dict[str, str]
+) -> Optional[str]:
+    if param_name not in tool_params:
+        return f"ERROR - {param_name} not found in tool params: {display_tool_params(tool_params)}"
+    return None
+
+
+def validate_path_in_sandbox(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    """
+    Validate that a path stays within the sandbox directory.
+
+    Args:
+        path (str): The path to validate
+
+    Returns:
+        Optional[str]: Error message if path is invalid, None if valid
+    """
+    # Resolve the absolute path after translation to catch any ../ tricks
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
+    sandbox_path = os.path.abspath(sandbox_dir)
+
+    if not resolved_path.startswith(sandbox_path):
+        # From the agent's perspective, any paths not in the sandbox don't exist
+        return f"ERROR - File {path} does not exist"
+    return None
+
+
+def validate_not_symlink(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
+    if os.path.islink(resolved_path):
+        return f"ERROR - File {path} is a symlink. Simlinks not allowed"
+    return None
+
+
+def validate_file_exists(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
+    if not os.path.exists(resolved_path):
+        return f"ERROR - File {path} does not exist. Please ensure the file exists."
+    return None
+
+
+def validate_not_a_directory(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
+    if os.path.isdir(resolved_path):
+        return f"ERROR - File {path} is a directory. Please ensure the path references a file, not a directory."
+    return None
+
+
+def validate_directory_exists(sandbox_dir: str, repo: str, path: str) -> Optional[str]:
+    resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
+    if not os.path.exists(resolved_path):
+        return f"ERROR - Directory {path} does not exist. Please ensure the directory exists."
+    return None
