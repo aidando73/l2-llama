@@ -405,44 +405,52 @@ def run_agent(
         with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
             file_content = f.read()
         
-        old_content_pattern = r"<old_content>(.*?)</old_content>"
-        old_content_match = re.search(old_content_pattern, response.content, re.DOTALL)
-        if old_content_match:
+        response_content = response.content
+        i = 1
+        while old_content_match := re.search(r"<old_content>(.*?)</old_content>", response_content, re.DOTALL):
             old_content = old_content_match.group(1)
-            if old_content not in file_content:
-                msg = f"ERROR - old_content not found in file. Please ensure that old_content is an exact match of the content you want to replace."
+            response_content = response_content[old_content_match.end():]
+
+            new_content_pattern = r"<new_content>(.*?)</new_content>"
+            new_content_match = re.search(new_content_pattern, response_content, re.DOTALL)
+            if new_content_match:
+                new_content = new_content_match.group(1)
+                response_content = response_content[new_content_match.end():]
+            else:
+                msg = f"ERROR - edit {i} - new_content not found in response. Please ensure there is a following <new_content></new_content> tag for every <old_content></old_content> tag."
                 print(red(msg))
                 message += chat_message("system", msg)
                 continue
 
-            new_content_pattern = r"<new_content>(.*?)</new_content>"
-            new_content_match = re.search(new_content_pattern, response.content, re.DOTALL)
-            if new_content_match:
-                new_content = new_content_match.group(1)
-
-                if old_content == new_content:
-                    msg = f"ERROR - old_content and new_content are the same. Please ensure that new_content is different from old_content."
-                    print(red(msg))
-                    message += chat_message("system", msg)
-                    continue
-
-                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                    new_content = file_content.replace(old_content, new_content)
-                    f.write(new_content)
-                
-                diff = list(
-                    difflib.unified_diff(
-                        file_content.splitlines(keepends=True),
-                        new_content.splitlines(keepends=True),
-                        fromfile="before",
-                        tofile="after",
-                    )
-                )
-                msg = "File successfully updated:\n" + "\n".join(diff)
-                print(green("File successfully updated:"))
-                print("\n".join(diff))
+            if old_content not in file_content:
+                msg = f"ERROR - edit {i} - old_content not found in file. Please ensure that old_content is an exact match of the content you want to replace."
+                print(red(msg))
                 message += chat_message("system", msg)
-                file_edited = True
+                continue
+
+            if old_content == new_content:
+                msg = f"ERROR - edit {i} - old_content and new_content are the same. Please ensure that new_content is different from old_content."
+                print(red(msg))
+                message += chat_message("system", msg)
+                continue
+
+            with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                new_content = file_content.replace(old_content, new_content)
+                f.write(new_content)
+            
+            diff = list(
+                difflib.unified_diff(
+                    file_content.splitlines(keepends=True),
+                    new_content.splitlines(keepends=True),
+                    fromfile="before",
+                    tofile="after",
+                )
+            )
+            msg = "File successfully updated:\n" + "\n".join(diff)
+            print(green("File successfully updated:"))
+            print("\n".join(diff))
+            message += chat_message("system", msg)
+            file_edited = True
         
         if "<|finish|>" in response.content:
             if file_edited:
