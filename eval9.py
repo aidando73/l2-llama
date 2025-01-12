@@ -11,6 +11,8 @@ import re
 import datetime
 import traceback
 import multiprocessing as mp
+import threading
+import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -72,9 +74,21 @@ def main():
         for _, row in df.iterrows():
             job_queue.put(row)
 
+        # Create a thread to follow the log file
+        stop_event = threading.Event()
+        log_thread = threading.Thread(
+            target=follow_log, 
+            args=(os.path.join(args.eval_dir, "logs", f"worker_0.log"), stop_event)
+        )
+        log_thread.start()
+
         pool.map(
             worker_process, [(job_queue, i, args.eval_dir) for i in range(num_workers)]
         )
+
+        # Signal the log thread to stop
+        stop_event.set()
+        log_thread.join()
 
     print("Done running all instances")
 
@@ -97,11 +111,7 @@ def worker_process(args):
         os.makedirs(os.path.join(eval_dir, "logs"), exist_ok=True)
         log_path = os.path.join(eval_dir, "logs", f"worker_{worker_id}.log")
         
-    if worker_id == 0:
-        # Only worker 0 will print to stdout as well as the log file
-        sys.stdout = TeeOutput(log_path)
-    else:
-        sys.stdout = open(log_path, "w", buffering=1)
+    sys.stdout = open(log_path, "w", buffering=1)
     sys.stderr = sys.stdout
 
     print(f"Worker {worker_id} started")
@@ -328,18 +338,23 @@ def validate_instance(row, sandbox_dir, eval_dir=None):
         bufsize=1,
     )
 
-# Create a custom file-like object that writes to both file and stdout
-class TeeOutput:
-    def __init__(self, file_path):
-        self.file = open(file_path, "w", buffering=1)
-        self.stdout = sys.stdout
+def follow_log(log_path, stop_event):
+    """Follow the log file and print new lines as they appear"""
 
-    def write(self, data):
-        self.file.write(data)
-        self.stdout.write(data)
+    # Wait for the log file to be created
+    while not stop_event.is_set():
+        if os.path.exists(log_path):
+            break
+        time.sleep(0.1)
 
-    def flush(self):
-        pass
+    # Follow the log file
+    with open(log_path, 'r') as file:
+        while not stop_event.is_set():
+            line = file.readline()
+            if line:
+                print(line, end='')
+            else:
+                time.sleep(0.1)
 
 if __name__ == "__main__":
     main()

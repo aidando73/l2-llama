@@ -178,7 +178,7 @@ eval_dir=$(realpath swe-evals)/v27-70B-workers-4 \
     && mkdir -p $eval_dir \
     && python -u swe-eval10.py --eval_dir $eval_dir
 
-version=v30-edit-file-tool-call && \
+version=v30.1-error-for-diff && \
 eval_dir=$(realpath evals/$version) && \
 mkdir -p $eval_dir && \
 python eval9.py --eval_dir $eval_dir
