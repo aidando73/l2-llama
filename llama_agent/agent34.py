@@ -745,6 +745,9 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
         # Find minimum indentation
         whitespace_count = []
         for line in lines:
+            if line.strip() == "":
+                # Skip empty lines
+                continue
             if match := re.match(r'^[ \t]+', line):
                 whitespace_count.append(len(match.group(0)))
             else:
@@ -765,10 +768,14 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
         return old_file_content
 
     m = len(old_content_lines)
-    print(f"m: {m}")
+    # print("Indentation aware edit")
+    # print(f"m: {m}")
     for i in range(len(old_file_content_lines) - m + 1):
         lines = old_file_content_lines[i:i + m]
         indent_char, common_indentation = get_common_indentation(lines)
+        indent_char_repr = "\\s" if indent_char == " " else "\\t"
+        # print(f"i: {i}" + "-" * 100)
+        # print(f"indent_char: {indent_char_repr}, common_indentation: {common_indentation}")
 
         # Check if the old content is in the dedented content
         content_dedented = dedent("".join(lines))
@@ -779,7 +786,10 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
             content_dedented = content_dedented.splitlines(keepends=True)
             res = ""
             for line in content_dedented:
-                res += indent_char * common_indentation + line
+                if line.strip() == "":
+                    res += line
+                else:
+                    res += indent_char * common_indentation + line
             return "".join(old_file_content_lines[:i]) + res + "".join(old_file_content_lines[i + m:])
 
     raise AssertionError("old_content not found in file. Please ensure that old_content is an exact match of the content you want to replace.")

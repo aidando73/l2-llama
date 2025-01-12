@@ -46,6 +46,7 @@ class TestReplaceContent:
         class Foo:
             @classmethod
             def _scan_iterable_shape(cls, iterable):
+
                 def f(pointer):
                     if not isinstance(pointer, Iterable):
                         return [pointer], ()
@@ -54,6 +55,7 @@ class TestReplaceContent:
         old_content = """\
             @classmethod
             def _scan_iterable_shape(cls, iterable):
+
                 def f(pointer):
                     if not isinstance(pointer, Iterable):
         """
