@@ -400,8 +400,6 @@ def run_agent(
 
         print(magenta(response.content))
 
-        
-    
     if finished:
         print(blue("Agent marked as finished"))
     else:
