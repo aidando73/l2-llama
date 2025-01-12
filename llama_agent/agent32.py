@@ -190,20 +190,190 @@ def run_agent(
     """
     PHASE 1: Locate the relevant file
     """
-
+    print("PHASE 1 " + "-" * 80)
     message = Phase1PromptGenerator() \
         .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, custom_tools=PHASE1_TOOLS) \
         .render()
-
-    response = client.inference.completion.create(
-        model=MODEL_ID,
+    message += header("assistant")
+    message += "ANALYSE:\n"
+    print(f"Input tokens: {token_count(message)}")
+    response = client.inference.completion(
+        model_id=MODEL_ID,
         content=message,
         sampling_params=sampling_params,
     )
 
-    print(response)
 
+    if "EXECUTE:" in response.content:
+        # Sometimes the agent will respond with the EXECUTE statement
+        # we want it to respond in separate turns so it's easier to pre-empt the model
+        # and parse the tool call
+        # print("DEBUG", response.content)
+        analyse_statement = response.content[: response.content.find("EXECUTE:")]
+        analyse_statement = analyse_statement.rstrip()
+    else:
+        analyse_statement = response.content
+    message += analyse_statement
+    message += f"<|eot_id|>"
+
+    print("ANALYSE:")
+    print(magenta(analyse_statement))
+
+    # EXECUTE
+    message += header("assistant")
+    message += "EXECUTE: \n"
+    # Pre-empt the tool call to prevent poor tool call formatting
+    raw_tool_call = '['
+    message += raw_tool_call
+    print(f"Input tokens: {token_count(message)}")
+    response = client.inference.completion(
+        model_id=MODEL_ID,
+        content=message,
+        sampling_params=sampling_params,
+    )
+    message += response.content
+    message += f"<|eot_id|>"
+
+    raw_tool_call += response.content
+    print(f"EXECUTE:\n{blue(raw_tool_call)}")
+    # Evaluate tool calls
+    tool_calls = parse_tool_calls(raw_tool_call)
+    for tool_call in tool_calls:
+
+        if tool_call[0] == "error":
+            _, error_message = tool_call
+            msg = f"ERROR - Could not parse tool call: {error_message}"
+            print(red(msg))
+            message += chat_message("tool", msg)
+            continue
+
+        tool_name, tool_params = tool_call
+        msg = f"[{tool_name}{display_tool_params(tool_params)}]"
+        message += header("tool")
+        message += "Executing tool call: " + msg + "\n"
+        print("Executing tool call: " + cyan(msg))
+
+        try:
+            result, result_msg = execute_tool_call(tool_name, tool_params, sandbox_dir, repo)
+        except Exception as e:
+            result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
+
+        message += f"Result: {result_msg}\n"
+
+        if result == "success":
+            # Truncate the result message to 200 characters since it can be long
+            print("Result: " + result_msg[:200] + "...")
+        else:
+            print("Result: " + result_msg)
+
+        message += f"<|eot_id|>"
+
+        if result == "success" and tool_name == "pick":
+            finished = True
+    
     """
     PHASE 2: Edit the file
     """
     # TODO
+
+
+def header(role: Literal["user", "assistant", "system", "tool"]):
+    return f"<|start_header_id|>{role}<|end_header_id|>\n\n"
+
+def token_count(message: str):
+    return len(tokenizer.encode(message, bos=False, eos=False))
+
+
+def parse_tool_calls(
+    content,
+) -> list[Union[tuple[str, dict[str, str]], tuple[Literal["error"], str]]]:
+    """
+    Parse tool calls from the content.
+
+    Args:
+        content (str): The content to parse tool calls from.
+
+    Returns:
+        list[Union[tuple[str, dict[str, str]], tuple[Literal["error"], str]]: Either:
+            tuple[str, dict[str, str]]:
+                - name (str): The name of the tool
+                - params (dict): The parameters of the tool
+            or tuple[Literal["error"], str] if the tool call could not be parsed:
+                - "error"
+                - error_message (str): The error message
+    """
+    if not is_valid_python_list(content):
+        content = content.strip()
+
+        # Add square brackets if missing
+        if not content.startswith("["):
+            content = f"[{content}"
+        if not content.endswith("]"):
+            content = f"{content}]"
+
+    try:
+        result = parse_python_list_for_function_calls(content)
+        if is_valid_python_list(content):
+            # Add the original tool content to each result tuple
+            result = [(name, params) for name, params in result]
+            return result
+        else:
+            return [(
+                "error",
+                "Tool call invalid syntax: " + content,
+            )]
+    except Exception as e:
+        return [(
+            "error",
+            "Tool call invalid syntax: Could not parse tool call: "
+            + content
+            + " "
+            + str(e),
+        )]
+
+def execute_phase_1_tool_call(
+    tool_name: str, tool_params: dict[str, str], sandbox_dir: str, repo: str
+) -> Union[Tuple[Literal["success"], str], Tuple[Literal["error"], str]]:
+    """
+    Execute a tool call and return a message indicating the result of the tool call.
+
+    Args:
+        tool_name (str): The name of the tool to execute.
+        tool_params (dict[str, str]): The parameters to pass to the tool.
+
+    Returns:
+        Union[Tuple[Literal["success"], str], Tuple[Literal["error"], str]]:
+            ("success", result): The result of the tool call.
+            ("error", error_message): The error message if the tool call failed.
+    """
+    if tool_name == "list_files":
+        if (
+            error := validate_param_exists("path", tool_params)
+            or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+            or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+            or validate_directory_exists(sandbox_dir, repo, tool_params["path"])
+        ):
+            return ("error", error)
+
+        path = os.path.join(sandbox_dir, repo, tool_params["path"])
+        files = list_files_in_repo(path, depth=1)
+        return ("success", "\n".join(files))
+    elif tool_name == "view_file":
+        if (
+            error := validate_param_exists("path", tool_params)
+            or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+            or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+            or validate_file_exists(sandbox_dir, repo, tool_params["path"])
+            or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
+        ):
+            return ("error", error)
+
+        path = os.path.join(sandbox_dir, repo, tool_params["path"])
+        with open(f"{path}", "r") as f:
+            file_content = f.read()
+        return ("success", file_content)
+
+    elif tool_name == "pick":
+        throw NotImplementedError("Phase 1 tool call not implemented")
+    else:
+        return ("error", f"ERROR - Unknown tool: {tool_name}")
