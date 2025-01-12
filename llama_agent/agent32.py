@@ -36,7 +36,7 @@ MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 MAX_OUTPUT_TOKENS = 512
 
 PHASE1_ITERATIONS = 10
-
+PHASE2_ITERATIONS = 10
 sampling_params = SamplingParams(
     strategy="greedy",
     max_tokens=MAX_OUTPUT_TOKENS,
@@ -180,6 +180,131 @@ PHASE1_TOOLS = [
     ),
 ]
 
+
+class Phase2PromptGenerator(PromptTemplateGeneratorBase):
+    def gen(
+        self, problem_statement: str, sandbox_dir: str, repo: str, file_path: str
+    ) -> str:
+        template_str = textwrap.dedent(
+            """
+            <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+            
+            You are an expert software engineer. You are given the following problem:
+            <problem_statement>
+            {{ problem_statement }}
+            </problem_statement>
+
+            The repo is called {{ repo }}.
+
+            You have located the relevant file to the problem statement here: {{ file_path }}
+
+            Here is the file content:
+            <file_content>
+            {{ file_content }}
+            </file_content>
+
+            Your task is to edit the file to fix the problem.
+
+            You can perform only one of the following steps at a time:
+            1. ANALYZE: 
+            - Explain what you understand about the current state
+            - Review the previous tool call (if any)
+            - Describe the next edits that are needed to fix the problem
+
+            2. EXECUTE:
+            - Make the appropriate function call(s)
+            - Format calls in the correct format specified below
+
+            If you decide to invoke any of the function(s), you MUST put it in the format of [func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]
+
+            Here is a list of functions in JSON format that you can invoke.
+
+            [
+                {% for t in custom_tools -%}
+                {# manually setting up JSON because jinja sorts keys in unexpected ways -#}
+                {%- set tname = t.tool_name -%}
+                {%- set tdesc = t.description -%}
+                {%- set tparams = t.parameters -%}
+                {%- set required_params = [] -%}
+                {%- for name, param in tparams.items() if param.required == true -%}
+                    {%- set _ = required_params.append(name) -%}
+                {%- endfor -%}
+                {
+                    "name": "{{tname}}",
+                    "description": "{{tdesc}}",
+                    "parameters": {
+                        "type": "dict",
+                        "required": {{ required_params | tojson }},
+                        "properties": {
+                            {%- for name, param in tparams.items() %}
+                            "{{name}}": {
+                                "type": "{{param.param_type}}",
+                                "description": "{{param.description}}"{% if param.default %},
+                                "default": "{{param.default}}"{% endif %}
+                            }{% if not loop.last %},{% endif %}
+                            {%- endfor %}
+                        }
+                    }
+                }{% if not loop.last %},
+                {% endif -%}
+                {%- endfor %}
+            ]
+
+            Structure your response as:
+            <|start_header_id|>assistant<|end_header_id|>
+
+            ANALYZE:
+            [Your analysis here]<|eot_id|>
+
+            or:
+            <|start_header_id|>assistant<|end_header_id|>
+
+            EXECUTE:
+            [Function call in the correct format specified above]<|eot_id|>
+
+            <|eot_id|>
+            """
+        )
+
+        with open(os.path.join(sandbox_dir, repo, file_path), "r") as f:
+            file_content = f.read()
+
+        return PromptTemplate(
+            template_str.lstrip("\n"),
+            {
+                "custom_tools": [t.model_dump() for t in PHASE2_TOOLS],
+                "problem_statement": problem_statement,
+                "repo": repo,
+                "file_path": file_path,
+                "file_content": file_content
+            },
+        )
+
+PHASE2_TOOLS = [
+    ToolDefinition(
+        tool_name="edit_file",
+        description="Edit a file. Specify the string to replace and the new string to write to the file.",
+        parameters={
+            "old_str": ToolParamDefinition(
+                param_type="string",
+                description="The string in the file to replace. Must be non-empty.",
+                required=True,
+            ),
+            "new_str": ToolParamDefinition(
+                param_type="string",
+                description="The new string to write to the file.",
+                required=True,
+            ),
+        },
+    ),
+    ToolDefinition(
+        tool_name="finish",
+        description=("If you have solved the problem, call this function to finish the task."
+                      "Note that you must make changes to the file to finish the task, otherwise this function will fail."),
+        parameters={},
+    ),
+]
+
 def run_agent(
     client: LlamaStackClient,
     repo: str,
@@ -281,7 +406,7 @@ def run_agent(
     
     if eval_dir:
         with open(
-            os.path.join(eval_dir, "trajs", f"{instance_id}-prompt.txt"), "w"
+            os.path.join(eval_dir, "trajs", f"{instance_id}-phase-1-prompt.txt"), "w"
         ) as f:
             f.write(message)
     else:
@@ -291,7 +416,99 @@ def run_agent(
     """
     PHASE 2: Edit the file
     """
-    # TODO
+    print("PHASE 2 " + "-" * 80)
+    message = Phase2PromptGenerator() \
+        .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, file_path=file_chosen) \
+        .render()
+
+    for i in range(PHASE2_ITERATIONS):
+        if file_chosen:
+            break
+        message += header("assistant")
+        message += "ANALYSE:\n"
+        print(f"Input tokens: {token_count(message)}")
+        response = client.inference.completion(
+            model_id=MODEL_ID,
+            content=message,
+            sampling_params=sampling_params,
+        )
+
+
+        if "EXECUTE:" in response.content:
+            # Sometimes the agent will respond with the EXECUTE statement
+            # we want it to respond in separate turns so it's easier to pre-empt the model
+            # and parse the tool call
+            # print("DEBUG", response.content)
+            analyse_statement = response.content[: response.content.find("EXECUTE:")]
+            analyse_statement = analyse_statement.rstrip()
+        else:
+            analyse_statement = response.content
+        message += analyse_statement
+        message += f"<|eot_id|>"
+
+        print("ANALYSE:")
+        print(magenta(analyse_statement))
+
+        # EXECUTE
+        message += header("assistant")
+        message += "EXECUTE: \n"
+        # Pre-empt the tool call to prevent poor tool call formatting
+        raw_tool_call = '['
+        message += raw_tool_call
+        print(f"Input tokens: {token_count(message)}")
+        response = client.inference.completion(
+            model_id=MODEL_ID,
+            content=message,
+            sampling_params=sampling_params,
+        )
+        message += response.content
+        message += f"<|eot_id|>"
+
+        raw_tool_call += response.content
+        print(f"EXECUTE:\n{blue(raw_tool_call)}")
+        # Evaluate tool calls
+        tool_calls = parse_tool_calls(raw_tool_call)
+        for tool_call in tool_calls:
+
+            if tool_call[0] == "error":
+                _, error_message = tool_call
+                msg = f"ERROR - Could not parse tool call: {error_message}"
+                print(red(msg))
+                message += chat_message("tool", msg)
+                continue
+
+            tool_name, tool_params = tool_call
+            msg = f"[{tool_name}{display_tool_params(tool_params)}]"
+            message += header("tool")
+            message += "Executing tool call: " + msg + "\n"
+            print("Executing tool call: " + cyan(msg))
+
+            try:
+                result, result_msg = execute_phase_2_tool_call(tool_name, tool_params, sandbox_dir, repo, file_path)
+            except Exception as e:
+                result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
+
+            message += f"Result: {result_msg}\n"
+
+            if result == "success":
+                # Truncate the result message to 200 characters since it can be long
+                print("Result: " + result_msg[:200] + "...")
+            else:
+                print("Result: " + result_msg)
+
+            message += f"<|eot_id|>"
+
+            if result == "success" and tool_name == "finish":
+                break
+    
+    if eval_dir:
+        with open(
+            os.path.join(eval_dir, "trajs", f"{instance_id}-phase-2-prompt.txt"), "w"
+        ) as f:
+            f.write(message)
+    else:
+        with open("prompt.txt", "w") as f:
+            f.write(message)
 
 
 def header(role: Literal["user", "assistant", "system", "tool"]):
@@ -405,6 +622,44 @@ def execute_phase_1_tool_call(
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
     
+def execute_phase_2_tool_call(
+    tool_name: str, tool_params: dict[str, str], sandbox_dir: str, repo: str, file_path: str
+) -> Union[Tuple[Literal["success"], str], Tuple[Literal["error"], str]]:
+    if tool_name == "edit_file":
+        if (
+            error := validate_param_exists("new_str", tool_params)
+            or validate_param_exists("old_str", tool_params)
+        ):
+            return ("error", error)
+
+        if tool_params["old_str"] == "":
+            return ("error", "ERROR - old_str must be non-empty")
+
+        path = os.path.join(sandbox_dir, repo, file_path)
+        with open(f"{path}", "r") as f:
+            file_content = f.read()
+        with open(f"{path}", "w") as f:
+            old_str = tool_params["old_str"]
+            new_str = tool_params["new_str"]
+            new_content = file_content.replace(old_str, new_str)
+            f.write(new_content)
+        diff = list(
+            difflib.unified_diff(
+                file_content.splitlines(keepends=True),
+                new_content.splitlines(keepends=True),
+                fromfile="before",
+                tofile="after",
+            )
+        )
+        if len(diff) == 0:
+            return ("error", "ERROR - No changes made to file")
+        else:
+            return ("success", "File successfully updated\n" + "\n".join(diff))
+    elif tool_name == "finish":
+        return ("success", "Task finished")
+    else:
+        return ("error", f"ERROR - Unknown tool: {tool_name}")
+
 def display_tool_params(tool_params: dict[str, str]):
     return (
         "("
