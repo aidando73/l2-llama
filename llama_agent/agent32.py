@@ -196,82 +196,88 @@ def run_agent(
     message = Phase1PromptGenerator() \
         .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, custom_tools=PHASE1_TOOLS) \
         .render()
-    message += header("assistant")
-    message += "ANALYSE:\n"
-    print(f"Input tokens: {token_count(message)}")
-    response = client.inference.completion(
-        model_id=MODEL_ID,
-        content=message,
-        sampling_params=sampling_params,
-    )
+
+    file_chosen = None
+    for i in range(PHASE1_ITERATIONS):
+        if file_chosen:
+            break
+        message += header("assistant")
+        message += "ANALYSE:\n"
+        print(f"Input tokens: {token_count(message)}")
+        response = client.inference.completion(
+            model_id=MODEL_ID,
+            content=message,
+            sampling_params=sampling_params,
+        )
 
 
-    if "EXECUTE:" in response.content:
-        # Sometimes the agent will respond with the EXECUTE statement
-        # we want it to respond in separate turns so it's easier to pre-empt the model
-        # and parse the tool call
-        # print("DEBUG", response.content)
-        analyse_statement = response.content[: response.content.find("EXECUTE:")]
-        analyse_statement = analyse_statement.rstrip()
-    else:
-        analyse_statement = response.content
-    message += analyse_statement
-    message += f"<|eot_id|>"
-
-    print("ANALYSE:")
-    print(magenta(analyse_statement))
-
-    # EXECUTE
-    message += header("assistant")
-    message += "EXECUTE: \n"
-    # Pre-empt the tool call to prevent poor tool call formatting
-    raw_tool_call = '['
-    message += raw_tool_call
-    print(f"Input tokens: {token_count(message)}")
-    response = client.inference.completion(
-        model_id=MODEL_ID,
-        content=message,
-        sampling_params=sampling_params,
-    )
-    message += response.content
-    message += f"<|eot_id|>"
-
-    raw_tool_call += response.content
-    print(f"EXECUTE:\n{blue(raw_tool_call)}")
-    # Evaluate tool calls
-    tool_calls = parse_tool_calls(raw_tool_call)
-    for tool_call in tool_calls:
-
-        if tool_call[0] == "error":
-            _, error_message = tool_call
-            msg = f"ERROR - Could not parse tool call: {error_message}"
-            print(red(msg))
-            message += chat_message("tool", msg)
-            continue
-
-        tool_name, tool_params = tool_call
-        msg = f"[{tool_name}{display_tool_params(tool_params)}]"
-        message += header("tool")
-        message += "Executing tool call: " + msg + "\n"
-        print("Executing tool call: " + cyan(msg))
-
-        try:
-            result, result_msg = execute_phase_1_tool_call(tool_name, tool_params, sandbox_dir, repo)
-        except Exception as e:
-            result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
-
-        message += f"Result: {result_msg}\n"
-
-        if result == "success":
-            # Truncate the result message to 200 characters since it can be long
-            print("Result: " + result_msg[:200] + "...")
+        if "EXECUTE:" in response.content:
+            # Sometimes the agent will respond with the EXECUTE statement
+            # we want it to respond in separate turns so it's easier to pre-empt the model
+            # and parse the tool call
+            # print("DEBUG", response.content)
+            analyse_statement = response.content[: response.content.find("EXECUTE:")]
+            analyse_statement = analyse_statement.rstrip()
         else:
-            print("Result: " + result_msg)
-
+            analyse_statement = response.content
+        message += analyse_statement
         message += f"<|eot_id|>"
 
-        if result == "success" and tool_name == "pick":
-            finished = True
+        print("ANALYSE:")
+        print(magenta(analyse_statement))
+
+        # EXECUTE
+        message += header("assistant")
+        message += "EXECUTE: \n"
+        # Pre-empt the tool call to prevent poor tool call formatting
+        raw_tool_call = '['
+        message += raw_tool_call
+        print(f"Input tokens: {token_count(message)}")
+        response = client.inference.completion(
+            model_id=MODEL_ID,
+            content=message,
+            sampling_params=sampling_params,
+        )
+        message += response.content
+        message += f"<|eot_id|>"
+
+        raw_tool_call += response.content
+        print(f"EXECUTE:\n{blue(raw_tool_call)}")
+        # Evaluate tool calls
+        tool_calls = parse_tool_calls(raw_tool_call)
+        for tool_call in tool_calls:
+
+            if tool_call[0] == "error":
+                _, error_message = tool_call
+                msg = f"ERROR - Could not parse tool call: {error_message}"
+                print(red(msg))
+                message += chat_message("tool", msg)
+                continue
+
+            tool_name, tool_params = tool_call
+            msg = f"[{tool_name}{display_tool_params(tool_params)}]"
+            message += header("tool")
+            message += "Executing tool call: " + msg + "\n"
+            print("Executing tool call: " + cyan(msg))
+
+            try:
+                result, result_msg = execute_phase_1_tool_call(tool_name, tool_params, sandbox_dir, repo)
+            except Exception as e:
+                result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
+
+            message += f"Result: {result_msg}\n"
+
+            if result == "success":
+                # Truncate the result message to 200 characters since it can be long
+                print("Result: " + result_msg[:200] + "...")
+            else:
+                print("Result: " + result_msg)
+
+            message += f"<|eot_id|>"
+
+            if result == "success" and tool_name == "pick_file":
+                file_chosen = tool_params["path"]
+                break
     
     """
     PHASE 2: Edit the file
@@ -375,8 +381,16 @@ def execute_phase_1_tool_call(
             file_content = f.read()
         return ("success", file_content)
 
-    elif tool_name == "pick":
-        raise NotImplementedError("Phase 1 tool call not implemented")
+    elif tool_name == "pick_file":
+        if (
+            error := validate_param_exists("path", tool_params)
+            or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+            or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+            or validate_file_exists(sandbox_dir, repo, tool_params["path"])
+            or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
+        ):
+            return ("error", error)
+        return ("success", f"File picked - {tool_params['path']}")
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
     
