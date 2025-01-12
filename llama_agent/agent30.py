@@ -415,6 +415,8 @@ def execute_tool_call(
             file_content = f.read()
         return ("success", file_content)
 
+    elif tool_name == "finish":
+        return ("success", "Task finished")
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
 
