@@ -209,7 +209,9 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             Your task is to edit the file to fix the problem.
 
             You can make changes to the file by specifying <old_content></old_content> and <new_content></new_content> xml tags. \
-            The old content will be replaced with the new content.
+            The old content will be replaced with the new content. \
+            Ensure that the <old_content> exactly matches the existing code, including whitespace and indentation. \
+            Multiple changes should be specified separately.
 
             For example, for the file:
 
