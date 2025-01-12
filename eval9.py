@@ -1,7 +1,7 @@
 from datasets import load_dataset
 import os
 import sys
-from llama_agent.agent31 import run_agent
+from llama_agent.agent32 import run_agent
 from llama_stack_client import LlamaStackClient
 from dotenv import load_dotenv
 import pandas as pd
@@ -75,10 +75,14 @@ def main():
             job_queue.put(row)
 
         # Create a thread to follow the log file
+        if args.eval_dir:
+            log_path = os.path.join(args.eval_dir, "logs", f"worker_0.log")
+        else:
+            log_path = os.path.join(SCRIPT_DIR, f"worker_0.log")
         stop_event = threading.Event()
         log_thread = threading.Thread(
             target=follow_log, 
-            args=(os.path.join(args.eval_dir, "logs", f"worker_0.log"), stop_event)
+            args=(log_path, stop_event)
         )
         log_thread.start()
 
