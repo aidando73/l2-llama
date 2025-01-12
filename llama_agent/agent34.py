@@ -757,8 +757,12 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
         if common_indentation == 0:
             return '', 0
         else:
-            # If there is common indentation, we can just find the indent_char on the first line
-            indent_char = lines[0][0]
+            # If there is common indentation, we can just find the indent_char on the first non-empty line
+            for line in lines:
+                if line.strip() == "":
+                    continue
+                indent_char = line[0]
+                break
             return indent_char, common_indentation
 
     old_file_content_lines = old_file_content.splitlines(keepends=True)
