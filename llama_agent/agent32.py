@@ -671,6 +671,7 @@ def execute_phase_2_tool_call(
             new_str = tool_params["new_str"]
             new_content = file_content.replace(old_str, new_str)
             f.write(new_content)
+
         diff = list(
             difflib.unified_diff(
                 file_content.splitlines(keepends=True),
