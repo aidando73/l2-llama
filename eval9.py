@@ -337,11 +337,9 @@ class TeeOutput:
     def write(self, data):
         self.file.write(data)
         self.stdout.write(data)
-        self.stdout.flush()
 
     def flush(self):
-        self.file.flush()
-        self.stdout.flush()
+        pass
 
 if __name__ == "__main__":
     main()
