@@ -208,7 +208,30 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             {{ file_content }}
             </file_content>
 
-            Your task is to edit the file to fix the problem.
+            Your task is to edit the file to fix the problem. Follow this structured approach:
+            1. Analysis Phase:
+            - Describe the core issue identified in the code
+            - Explain potential implications of the current implementation
+            - List any relevant design patterns or best practices that apply
+            - Identify any potential security, performance, or maintainability concerns
+
+            2. Solution Planning:
+            - Outline your proposed solution strategy
+            - Explain why this approach is optimal
+            - Identify any potential trade-offs or considerations
+            - Consider alternative approaches and explain why they were not chosen
+
+            3. Implementation Strategy:
+            - Break down the required changes into logical steps
+            - Explain how each modification contributes to the solution
+            - Consider potential edge cases or side effects
+            - Ensure backwards compatibility if relevant
+
+            After completing your analysis, implement your solution using the following format:
+            For each change:
+            1. Explain why this specific change is necessary
+            2. Show the modification using the old_content/new_content tags
+            3. Describe how this change affects the overall solution
 
             You can make changes to the file by specifying <old_content></old_content> and <new_content></new_content> xml tags. \
             The old content will be replaced with the new content. \
@@ -241,6 +264,40 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
                     print("Hello, Hello")
                     print("Hello, world!")
             </file_content>
+
+            Example of a well-structured response:
+            ```
+            ANALYSIS
+            Core Issue:
+            [Detailed explanation of the problem]
+            Implications:
+            [List of potential impacts]
+            Relevant Patterns/Practices:
+            [Applicable patterns or best practices]
+
+            SOLUTION STRATEGY
+            Proposed Approach:
+            [Detailed solution strategy]
+            Trade-offs Considered:
+            [List of trade-offs and decisions]
+
+            IMPLEMENTATION
+            Change 1:
+            - Purpose: [Explanation]
+            <old_content>
+            [Original code]
+            </old_content>
+            <new_content>
+            [Modified code]
+            </new_content>
+            - Impact: [Explanation of effects]
+            [Additional changes as needed...]
+
+            VERIFICATION
+            - Explanation of how changes address the original problem
+            - Confirmation of edge case handling
+            - Verification of code style and best practices
+            ```
 
             Please make the necessary changes to the file to fix the problem. \
 
