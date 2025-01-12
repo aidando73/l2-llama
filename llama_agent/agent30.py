@@ -235,102 +235,7 @@ def run_agent(
             print("Executing tool call: " + cyan(msg))
 
             try:
-                # Custom edit_file tool call
-                # We don't use the tool call format for old and new content becuase Llama struggles with it
-                # Llama needs to escape newlines and double quotes, it's easier to just prompt for the old and new content
-                if tool_name == "edit_file":
-                    if (error := validate_param_exists("path", tool_params)
-                        or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
-                        or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
-                        or validate_file_exists(sandbox_dir, repo, tool_params["path"])
-                        or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
-                    ):
-                        result, result_msg = ("error", error)
-                    else:
-                        path = os.path.join(sandbox_dir, repo, tool_params["path"])
-
-                        # Prompt for old content
-                        message += chat_message("tool", (
-                            "Please provide the old content to replace."
-                            "Please format it it between triple backticks."
-                            "E.g., ```\nprint('Hello, world!')\n```"
-                        ))
-                        message += "<|eot_id|>"
-                        print(f"Input tokens: {token_count(message)}")
-                        print("OLD_CONTENT: ")
-                        message += header("assistant")
-                        message += '```\n'
-                        response = client.inference.completion(
-                            model_id=MODEL_ID,
-                            content=message,
-                            sampling_params=sampling_params,
-                        )
-                        old_content = strip_code_block(response.content)
-                        # Sometimes the agent will add additional text or no backticks
-                        # So re-introduce the backticks to provide it a better example
-                        message += f"```\n{old_content}\n```"
-                        print(blue(old_content))
-                        message += "<|eot_id|>"
-                        message += header("assistant")
-
-                        # Prompt for new content
-                        message += chat_message("tool", (
-                            "Provide the new content to replace the old content with."
-                            "Please format it between triple backticks. "
-                            "E.g., ```\nprint('Hello, world!')\n```"
-                        ))
-                        message += "<|eot_id|>"
-                        message += header("assistant")
-                        message += '```\n'
-                        print(f"Input tokens: {token_count(message)}")
-                        print("NEW_CONTENT: ")
-                        response = client.inference.completion(
-                            model_id=MODEL_ID,
-                            content=message,
-                            sampling_params=sampling_params,
-                        )
-                        new_content = strip_code_block(response.content)
-                        message += f"```\n{new_content}\n```"
-                        print(blue(new_content))
-                        message += "<|eot_id|>"
-                        message += header("tool")
-
-                        with open(path, "r") as f:
-                            old_file_content = f.read()
-
-                        try:    
-                            new_file_content = replace_content(old_file_content, old_content, new_content)
-                            with open(path, "w") as f:
-                                f.write(new_file_content)
-                            # Get diff between old and new content
-                            diff = list(
-                                difflib.unified_diff(
-                                    old_file_content.splitlines(keepends=True),
-                                    new_file_content.splitlines(keepends=True),
-                                    fromfile="before",
-                                    tofile="after",
-                                )
-                            )
-                            if len(diff) == 0:
-                                result, result_msg = ("error", "ERROR - No changes made to file")
-                            else:
-                                edit_made = True
-                                result, result_msg = ("success", "File successfully updated\n" + "\n".join(diff))
-                        except AssertionError as e:
-                            result, result_msg = ("error", f"ERROR - {e}")
-                elif tool_name == "finish":
-                    if not edit_made:
-                        result = "error"
-                        result_msg = (
-                            "ERROR - you have called finish() without making any changes. "
-                            "You have made a mistake somewhere. "
-                            "Please review everything you have done, identify where you made a mistake and try again. "
-                            "This time, ensure you make a successful edit_file call."
-                        )
-                    else:
-                        result, result_msg = ("success", "Task marked as finished")
-                else:
-                    result, result_msg = execute_tool_call(tool_name, tool_params, sandbox_dir, repo)
+                result, result_msg = execute_tool_call(tool_name, tool_params, sandbox_dir, repo)
             except Exception as e:
                 result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
@@ -401,6 +306,16 @@ TOOLS = [
                 description="Path to file, e.g. `src/file.py` or `src/example/file.py`.",
                 required=True,
             ),
+            "old_str": ToolParamDefinition(
+                param_type="string",
+                description="The string in the file at `path` to replace. If not specified, the entire file will be replaced by new_str",
+                required=False,
+            ),
+            "new_str": ToolParamDefinition(
+                param_type="string",
+                description="The new string to write to the file. If the old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
+                required=True,
+            ),
         },
     ),
     ToolDefinition(
@@ -450,7 +365,30 @@ def execute_tool_call(
         path = os.path.join(sandbox_dir, repo, tool_params["path"])
         files = list_files_in_repo(path, depth=1)
         return ("success", "\n".join(files))
+    elif tool_name == "edit_file":
+        if (
+            error := validate_param_exists("path", tool_params)
+            or validate_path_in_sandbox(sandbox_dir, repo, tool_params["path"])
+            or validate_param_exists("new_str", tool_params)
+            or validate_not_symlink(sandbox_dir, repo, tool_params["path"])
+            or validate_file_exists(sandbox_dir, repo, tool_params["path"])
+            or validate_not_a_directory(sandbox_dir, repo, tool_params["path"])
+        ):
+            return ("error", error)
 
+        path = os.path.join(sandbox_dir, repo, tool_params["path"])
+        if "old_str" in tool_params:
+            with open(f"{path}", "r") as f:
+                file_content = f.read()
+            with open(f"{path}", "w") as f:
+                old_str = tool_params["old_str"]
+                new_str = tool_params["new_str"]
+                new_content = file_content.replace(old_str, new_str)
+                f.write(new_content)
+        else:
+            with open(f"{path}", "w") as f:
+                f.write(tool_params["new_str"])
+        return ("success", "File successfully updated")
     elif tool_name == "view_file":
         if (
             error := validate_param_exists("path", tool_params)
