@@ -194,7 +194,7 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             
             You are an expert software engineer with deep knowledge of code analysis, debugging, and best practices in software development. \
             You are given the following problem:
-            
+
             <problem_statement>
             {{ problem_statement }}
             </problem_statement>
@@ -243,7 +243,6 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             </file_content>
 
             Please make the necessary changes to the file to fix the problem. \
-            You have 10 turns to make changes to the file. \
             When you are done, use the <|finish|> tag to indicate that you are finished.
             <|eot_id|>
             """
