@@ -167,7 +167,6 @@ def run_agent(
         .render()
     )
 
-    edit_made = False
     finished = False
     for i in range(ITERATIONS):
         print("\n")
