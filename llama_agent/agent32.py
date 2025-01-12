@@ -37,6 +37,7 @@ MAX_OUTPUT_TOKENS = 512
 
 PHASE1_ITERATIONS = 10
 PHASE2_ITERATIONS = 10
+
 sampling_params = SamplingParams(
     strategy="greedy",
     max_tokens=MAX_OUTPUT_TOKENS,
@@ -413,6 +414,10 @@ def run_agent(
         with open("prompt.txt", "w") as f:
             f.write(message)
 
+    if file_chosen is None:
+        print("No file chosen - exiting")
+        return ("no_changes_made", "", None)
+
     """
     PHASE 2: Edit the file
     """
@@ -422,8 +427,6 @@ def run_agent(
         .render()
 
     for i in range(PHASE2_ITERATIONS):
-        if file_chosen:
-            break
         message += header("assistant")
         message += "ANALYSE:\n"
         print(f"Input tokens: {token_count(message)}")
