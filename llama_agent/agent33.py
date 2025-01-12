@@ -398,61 +398,9 @@ def run_agent(
             sampling_params=sampling_params,
         )
 
-        print("ANALYSE:")
-        print(magenta(analyse_statement))
+        print(magenta(response.content))
 
-        # EXECUTE
-        message += header("assistant")
-        message += "EXECUTE: \n"
-        # Pre-empt the tool call to prevent poor tool call formatting
-        raw_tool_call = '['
-        message += raw_tool_call
-        print(f"Input tokens: {token_count(message)}")
-        response = client.inference.completion(
-            model_id=MODEL_ID,
-            content=message,
-            sampling_params=sampling_params,
-        )
-        message += response.content
-        message += f"<|eot_id|>"
-
-        raw_tool_call += response.content
-        print(f"EXECUTE:\n{blue(raw_tool_call)}")
-        # Evaluate tool calls
-        tool_calls = parse_tool_calls(raw_tool_call)
-        for tool_call in tool_calls:
-
-            if tool_call[0] == "error":
-                _, error_message = tool_call
-                msg = f"ERROR - Could not parse tool call: {error_message}"
-                print(red(msg))
-                message += chat_message("tool", msg)
-                continue
-
-            tool_name, tool_params = tool_call
-            msg = f"[{tool_name}{display_tool_params(tool_params)}]"
-            message += header("tool")
-            message += "Executing tool call: " + msg + "\n"
-            print("Executing tool call: " + cyan(msg))
-
-            try:
-                result, result_msg = execute_phase_2_tool_call(tool_name, tool_params, sandbox_dir, repo, file_chosen)
-            except Exception as e:
-                result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
-
-            message += f"Result: {result_msg}\n"
-
-            if result == "success":
-                # Truncate the result message to 200 characters since it can be long
-                print("Result: " + result_msg[:200] + "...")
-            else:
-                print("Result: " + result_msg)
-
-            message += f"<|eot_id|>"
-
-            if result == "success" and tool_name == "finish":
-                finished = True
-                break
+        
     
     if finished:
         print(blue("Agent marked as finished"))
