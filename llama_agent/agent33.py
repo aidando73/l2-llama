@@ -192,7 +192,9 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             """
             <|begin_of_text|><|start_header_id|>system<|end_header_id|>
             
-            You are an expert software engineer. You are given the following problem:
+            You are an expert software engineer with deep knowledge of code analysis, debugging, and best practices in software development. \
+            You are given the following problem:
+            
             <problem_statement>
             {{ problem_statement }}
             </problem_statement>
