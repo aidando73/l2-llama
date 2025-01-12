@@ -178,7 +178,7 @@ eval_dir=$(realpath swe-evals)/v27-70B-workers-4 \
     && mkdir -p $eval_dir \
     && python -u swe-eval10.py --eval_dir $eval_dir
 
-version=v32.1-fix-missing-chat && \
+version=v32.2-phase-2 && \
 eval_dir=$(realpath evals/$version) && \
 mkdir -p $eval_dir && \
 python eval9.py --eval_dir $eval_dir

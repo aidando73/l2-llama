@@ -509,6 +509,11 @@ def run_agent(
                 finished = True
                 break
     
+    if finished:
+        print(blue("Agent marked as finished"))
+    else:
+        print(yellow("Max iterations reached"))
+    
     if eval_dir:
         with open(
             os.path.join(eval_dir, "trajs", f"{instance_id}-phase-2-prompt.txt"), "w"
