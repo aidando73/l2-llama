@@ -376,7 +376,7 @@ def execute_tool_call(
             return ("error", error)
 
         path = os.path.join(sandbox_dir, repo, tool_params["path"])
-        if "old_str" in tool_params:
+        if "old_str" in tool_params and tool_params["old_str"] != "":
             with open(f"{path}", "r") as f:
                 file_content = f.read()
             with open(f"{path}", "w") as f:
