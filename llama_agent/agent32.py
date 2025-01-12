@@ -279,6 +279,15 @@ def run_agent(
                 file_chosen = tool_params["path"]
                 break
     
+    if eval_dir:
+        with open(
+            os.path.join(eval_dir, "trajs", f"{instance_id}-prompt.txt"), "w"
+        ) as f:
+            f.write(message)
+    else:
+        with open("prompt.txt", "w") as f:
+            f.write(message)
+
     """
     PHASE 2: Edit the file
     """
