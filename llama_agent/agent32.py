@@ -374,6 +374,6 @@ def execute_phase_1_tool_call(
         return ("success", file_content)
 
     elif tool_name == "pick":
-        throw NotImplementedError("Phase 1 tool call not implemented")
+        raise NotImplementedError("Phase 1 tool call not implemented")
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
