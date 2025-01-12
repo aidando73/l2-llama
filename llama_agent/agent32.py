@@ -300,6 +300,8 @@ def header(role: Literal["user", "assistant", "system", "tool"]):
 def token_count(message: str):
     return len(tokenizer.encode(message, bos=False, eos=False))
 
+def chat_message(role: Literal["user", "assistant", "system", "tool"], content: str):
+    return f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
 
 def parse_tool_calls(
     content,
