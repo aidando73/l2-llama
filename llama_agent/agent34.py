@@ -752,6 +752,10 @@ def replace_content(old_file_content: str, old_content: str, new_content: str):
                 whitespace_count.append(len(match.group(0)))
             else:
                 whitespace_count.append(0)
+        
+        if not whitespace_count:
+            return '', 0
+
         common_indentation = min(whitespace_count)
 
         if common_indentation == 0:
