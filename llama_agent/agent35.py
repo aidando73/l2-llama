@@ -543,13 +543,14 @@ def run_agent(
             message += chat_message("system", msg)
 
         if no_errors and edit_attempt_made:
-            msg += (
+            msg = (
                 "All your edits were applied successfully. "
                 "Please review everything you have done so far. "
                 "If you are happy with the changes, please use the <|finish|> tag to indicate that you are finished. "
                 "Otherwise, you will be prompted to make further edits."
             )
             message += chat_message("system", msg)
+            message += header("assistant")
             print("System: " + blue(msg))
             print("Input tokens: " + str(token_count(message)))
             response = client.inference.completion(
