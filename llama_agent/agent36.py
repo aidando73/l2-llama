@@ -27,7 +27,7 @@ from subprocess import run
 from textwrap import dedent
 import textwrap
 import difflib
-
+from pprint import pprint
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
 MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 
@@ -425,6 +425,26 @@ def run_agent(
 
         message += response.content
         message += f"<|eot_id|>"
+
+        for diff in re.findall(r"```diff\n(.*?)```", response.content, re.DOTALL):
+            diff_lines = diff.splitlines()
+
+            # Collect hunks by looking for @@ ... @@ lines
+            hunks = []
+            # Skip the first line since it's the @@ ... @@ line
+            prev = 1
+            i = 1
+            while i < len(diff_lines):
+                if diff_lines[i].startswith("@@") and diff_lines[i].endswith("@@"):
+                    hunks.append(diff_lines[prev:i])
+                    prev = i + 1
+                i += 1
+            # Add the last hunk
+            hunks.append(diff_lines[prev:])
+
+                        
+
+            file_edited = True
         
         if "<|finish|>" in response.content:
             if file_edited:
