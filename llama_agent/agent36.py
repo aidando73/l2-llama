@@ -448,17 +448,17 @@ def run_agent(
                 pprint(hunk)
                 parsed_hunk = []
                 for line in hunk:
-                    if line.strip() == "":
-                        parsed_hunk.append(("", ""))
+                    if line.strip() == "" or line[0] == " ":
+                        parsed_hunk.append((" ", line[1:]))
                     elif line[0] == "-":
                         parsed_hunk.append(("-", line[1:]))
                     elif line[0] == "+":
                         parsed_hunk.append(("+", line[1:]))
                     else:
-                        parsed_hunk.append((" ", line[1:]))
+                        raise AssertionError(f"Unknown line: {line}")
                 
-                old_content = "\n".join([line for op, line in parsed_hunk if op == "-" or op == " " or op == ""])
-                new_content = "\n".join([line for op, line in parsed_hunk if op == "+" or op == " " or op == ""])
+                old_content = "\n".join([line for op, line in parsed_hunk if op == "-" or op == " "])
+                new_content = "\n".join([line for op, line in parsed_hunk if op == "+" or op == " "])
                 print("old_content")
                 print(old_content)
                 print("new_content")
