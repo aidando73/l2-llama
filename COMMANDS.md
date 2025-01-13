@@ -186,7 +186,7 @@ python eval9.py --eval_dir $eval_dir
 
 
 # Phase 2 gold
-version=v36.1-mvp && \
+version=v36.2-initial-lines && \
 eval_dir=$(realpath evals/$version) && \
 mkdir -p $eval_dir && \
 python eval10.py --eval_dir $eval_dir --skip_phase_1

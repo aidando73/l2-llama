@@ -472,6 +472,7 @@ def run_agent(
 
                 if old_content == "":
                     print("ERROR - old_content is empty. Can't apply hunk")
+                    message += chat_message("system", "ERROR - old_content is empty. Can't apply hunk")
                     continue
                 
                 with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
@@ -479,14 +480,30 @@ def run_agent(
                 
                 if old_content not in file_content:
                     print("ERROR - old_content not found in file. Can't apply hunk")
+                    message += chat_message("system", "ERROR - old_content not found in file. Can't apply hunk")
+                    continue
+                
+                if old_content == new_content:
+                    print("ERROR - old_content and new_content are the same. Can't apply hunk")
+                    message += chat_message("system", "ERROR - old_content and new_content are the same. Can't apply hunk")
                     continue
                 
                 with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                    f.write(file_content.replace(old_content, new_content))
+                    new_content = file_content.replace(old_content, new_content)
+                    f.write(new_content)
 
-                print("File updated")
-
-            file_edited = True
+                diff = list(
+                    difflib.unified_diff(
+                        file_content.splitlines(keepends=True),
+                        new_content.splitlines(keepends=True),
+                        fromfile="before",
+                        tofile="after",
+                    )
+                )
+                msg = "File updated:\n" + "\n".join(diff)
+                print("System: " + green(msg))
+                message += chat_message("system", msg)
+                file_edited = True
         
         if "<|finish|>" in response.content:
             if file_edited:
