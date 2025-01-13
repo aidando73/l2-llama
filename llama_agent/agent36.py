@@ -464,6 +464,18 @@ def run_agent(
                 print("new_content")
                 print(new_content)
 
+                if old_content == "":
+                    print("ERROR - old_content is empty. Can't apply hunk")
+                    continue
+                
+                with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
+                    file_content = f.read()
+                
+                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                    f.write(file_content.replace(old_content, new_content))
+
+                print("File updated")
+
             file_edited = True
         
         if "<|finish|>" in response.content:
