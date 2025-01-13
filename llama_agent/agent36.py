@@ -455,7 +455,7 @@ def run_agent(
                     elif line[0] == "+":
                         parsed_hunk.append(("+", line[1:]))
                     else:
-                        parsed_hunk.append((" ", line))
+                        parsed_hunk.append((" ", line[1:]))
                 
                 old_content = "\n".join([line for op, line in parsed_hunk if op == "-" or op == " " or op == ""])
                 new_content = "\n".join([line for op, line in parsed_hunk if op == "+" or op == " " or op == ""])
@@ -470,6 +470,10 @@ def run_agent(
                 
                 with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
                     file_content = f.read()
+                
+                if old_content not in file_content:
+                    print("ERROR - old_content not found in file. Can't apply hunk")
+                    continue
                 
                 with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
                     f.write(file_content.replace(old_content, new_content))
