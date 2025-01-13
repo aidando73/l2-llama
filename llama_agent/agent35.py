@@ -470,7 +470,6 @@ def run_agent(
     for i in range(PHASE2_ITERATIONS):
         if finished:
             break
-        no_errors = True
         message += header("assistant")
         print(f"Input tokens: {token_count(message)}")
         response = client.inference.completion(
@@ -489,10 +488,11 @@ def run_agent(
 
         response_content = response.content
         i = 0
-        file_edited = False
+        edit_attempt_made = False
         while old_content_match := re.search(
             r"<old_content>(.*?)</old_content>", response_content, re.DOTALL
         ):
+            edit_attempt_made = True
             i += 1
             old_content = old_content_match.group(1)
             response_content = response_content[old_content_match.end() :]
@@ -541,9 +541,8 @@ def run_agent(
             print("System: " + green(f"Edit {i} - File successfully updated:"))
             print("".join(diff))
             message += chat_message("system", msg)
-            file_edited = True
 
-        if no_errors and file_edited:
+        if no_errors and edit_attempt_made:
             msg += (
                 "All your edits were applied successfully. "
                 "Please review everything you have done so far. "
@@ -565,6 +564,14 @@ def run_agent(
 
             if "<|finish|>" in response.content:
                 finished = True
+        elif not edit_attempt_made:
+            msg = "No <old_content></old_content> and <new_content></new_content> tags found in response. Awaiting edit..."
+            print("System: " + blue(msg))
+            message += chat_message("system", msg)
+        elif not no_errors:
+            msg = "There were errors in your edits. Please fix the errors and try again."
+            print("System: " + red(msg))
+            message += chat_message("system", msg)
 
     if finished:
         print(blue("Agent marked as finished"))
