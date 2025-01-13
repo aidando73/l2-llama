@@ -513,7 +513,7 @@ def run_agent(
                 finished = True
                 break
             else:
-                msg = "ERROR - No changes made to file. Please ensure you have made at least one change to the file."
+                msg = "ERROR - <|finish|> was specified but no changes made to file. Please ensure you have made at least one change to the file."
                 print("System: " + red(msg))
                 message += chat_message("system", msg)
     
