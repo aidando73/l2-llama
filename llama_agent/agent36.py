@@ -471,7 +471,7 @@ def run_agent(
                 print(new_content)
 
                 if old_content == "":
-                    print("ERROR - old_content is empty. Can't apply hunk")
+                    print("System: ERROR - old_content is empty. Can't apply hunk")
                     message += chat_message("system", "ERROR - old_content is empty. Can't apply hunk")
                     continue
                 
@@ -479,12 +479,12 @@ def run_agent(
                     file_content = f.read()
                 
                 if old_content not in file_content:
-                    print("ERROR - old_content not found in file. Can't apply hunk")
+                    print("System: ERROR - old_content not found in file. Can't apply hunk")
                     message += chat_message("system", "ERROR - old_content not found in file. Can't apply hunk")
                     continue
                 
                 if old_content == new_content:
-                    print("ERROR - old_content and new_content are the same. Can't apply hunk")
+                    print("System: ERROR - old_content and new_content are the same. Can't apply hunk")
                     message += chat_message("system", "ERROR - old_content and new_content are the same. Can't apply hunk")
                     continue
                 
@@ -500,7 +500,7 @@ def run_agent(
                         tofile="after",
                     )
                 )
-                msg = "File updated:\n" + "\n".join(diff)
+                msg = "File updated:\n" + "".join(diff)
                 print("System: " + green(msg))
                 message += chat_message("system", msg)
                 file_edited = True
