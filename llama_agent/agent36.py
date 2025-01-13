@@ -442,7 +442,27 @@ def run_agent(
             # Add the last hunk
             hunks.append(diff_lines[prev:])
 
-                        
+            for hunk in hunks:
+                # Remove the first character of each line
+                print("processing hunk")
+                pprint(hunk)
+                parsed_hunk = []
+                for line in hunk:
+                    if line.strip() == "":
+                        parsed_hunk.append(("", ""))
+                    elif line[0] == "-":
+                        parsed_hunk.append(("-", line[1:]))
+                    elif line[0] == "+":
+                        parsed_hunk.append(("+", line[1:]))
+                    else:
+                        parsed_hunk.append((" ", line))
+                
+                old_content = "\n".join([line for op, line in parsed_hunk if op == "-" or op == " " or op == ""])
+                new_content = "\n".join([line for op, line in parsed_hunk if op == "+" or op == " " or op == ""])
+                print("old_content")
+                print(old_content)
+                print("new_content")
+                print(new_content)
 
             file_edited = True
         
