@@ -251,11 +251,10 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
 
             File editing rules:
             - Return edits similar to unified diffs that `diff -U0` would produce.
-            - No need to include the file path in the diff.
-            - No need to include timestamps in the diff.
             - Start each hunk of changes with a `@@ ... @@` line.
-            - No need to include line numbers like `diff -U0` does.
-
+            - Don't include line numbers like `diff -U0` does.
+            - Don't leave out any lines or the diff patch won't apply correctly.
+            - Indentation matters in the diffs!
 
             Please make the necessary changes to the file to fix the problem. \
 
