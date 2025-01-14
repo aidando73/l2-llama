@@ -429,9 +429,9 @@ def run_agent(
             diff_lines = diff.splitlines()
 
             # If the first line is a +++ or ---, remove it
-            if diff_lines[0].startswith("+++"):
-                diff_lines = diff_lines[1:]
             if diff_lines[0].startswith("---"):
+                diff_lines = diff_lines[1:]
+            if diff_lines[0].startswith("+++"):
                 diff_lines = diff_lines[1:]
 
             # Collect hunks by looking for @@ ... @@ lines
