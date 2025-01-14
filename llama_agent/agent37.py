@@ -412,6 +412,9 @@ def run_agent(
     for i in range(PHASE2_ITERATIONS):
         message += header("assistant")
         print(f"Input tokens: {token_count(message)}")
+        message += f"--- {{ file_path }}\n"
+        message += f"+++ {{ file_path }}\n"
+        message += f"@@"
         response = client.inference.completion(
             model_id=MODEL_ID,
             content=message,
@@ -423,84 +426,83 @@ def run_agent(
         message += response.content
         message += f"<|eot_id|>"
 
-        for diff in re.findall(r"```diff\n(.*?)```", response.content, re.DOTALL):
-            diff_lines = diff.splitlines()
+        diff_lines = diff.splitlines()
 
-            # If the first line is a +++ or ---, remove it
-            if diff_lines[0].startswith("---"):
-                diff_lines = diff_lines[1:]
-            if diff_lines[0].startswith("+++"):
-                diff_lines = diff_lines[1:]
+        # If the first line is a +++ or ---, remove it
+        if diff_lines[0].startswith("---"):
+            diff_lines = diff_lines[1:]
+        if diff_lines[0].startswith("+++"):
+            diff_lines = diff_lines[1:]
 
-            # Collect hunks by looking for @@ ... @@ lines
-            hunks = []
-            # Skip the first line since it's the @@ ... @@ line
-            prev = 1
-            i = 1
-            while i < len(diff_lines):
-                if diff_lines[i].startswith("@@"):
-                    hunks.append(diff_lines[prev:i])
-                    prev = i + 1
-                i += 1
-            # Add the last hunk
-            hunks.append(diff_lines[prev:])
+        # Collect hunks by looking for @@ ... @@ lines
+        hunks = []
+        # Skip the first line since it's the @@ ... @@ line
+        prev = 1
+        i = 1
+        while i < len(diff_lines):
+            if diff_lines[i].startswith("@@"):
+                hunks.append(diff_lines[prev:i])
+                prev = i + 1
+            i += 1
+        # Add the last hunk
+        hunks.append(diff_lines[prev:])
 
-            for hunk in hunks:
-                # Remove the first character of each line
-                print("processing hunk")
-                pprint(hunk)
-                parsed_hunk = []
-                for line in hunk:
-                    if line.strip() == "" or line[0] == " ":
-                        parsed_hunk.append((" ", line[1:]))
-                    elif line[0] == "-":
-                        parsed_hunk.append(("-", line[1:]))
-                    elif line[0] == "+":
-                        parsed_hunk.append(("+", line[1:]))
-                    else:
-                        raise AssertionError(f"Unknown line: {line}")
-                
-                old_content = "\n".join([line for op, line in parsed_hunk if op == "-" or op == " "])
-                new_content = "\n".join([line for op, line in parsed_hunk if op == "+" or op == " "])
-                print("old_content")
-                print(old_content)
-                print("new_content")
-                print(new_content)
+        for hunk in hunks:
+            # Remove the first character of each line
+            print("processing hunk")
+            pprint(hunk)
+            parsed_hunk = []
+            for line in hunk:
+                if line.strip() == "" or line[0] == " ":
+                    parsed_hunk.append((" ", line[1:]))
+                elif line[0] == "-":
+                    parsed_hunk.append(("-", line[1:]))
+                elif line[0] == "+":
+                    parsed_hunk.append(("+", line[1:]))
+                else:
+                    raise AssertionError(f"Unknown line: {line}")
+            
+            old_content = "\n".join([line for op, line in parsed_hunk if op == "-" or op == " "])
+            new_content = "\n".join([line for op, line in parsed_hunk if op == "+" or op == " "])
+            print("old_content")
+            print(old_content)
+            print("new_content")
+            print(new_content)
 
-                if old_content == "":
-                    print("System: ERROR - old_content is empty. Can't apply hunk")
-                    message += chat_message("system", "ERROR - old_content is empty. Can't apply hunk")
-                    continue
-                
-                with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
-                    file_content = f.read()
-                
-                if old_content not in file_content:
-                    print("System: ERROR - old_content not found in file. Can't apply hunk")
-                    message += chat_message("system", "ERROR - old_content not found in file. Can't apply hunk")
-                    continue
-                
-                if old_content == new_content:
-                    print("System: ERROR - old_content and new_content are the same. Can't apply hunk")
-                    message += chat_message("system", "ERROR - old_content and new_content are the same. Can't apply hunk")
-                    continue
-                
-                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                    new_content = file_content.replace(old_content, new_content)
-                    f.write(new_content)
+            if old_content == "":
+                print("System: ERROR - old_content is empty. Can't apply hunk")
+                message += chat_message("system", "ERROR - old_content is empty. Can't apply hunk")
+                continue
+            
+            with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
+                file_content = f.read()
+            
+            if old_content not in file_content:
+                print("System: ERROR - old_content not found in file. Can't apply hunk")
+                message += chat_message("system", "ERROR - old_content not found in file. Can't apply hunk")
+                continue
+            
+            if old_content == new_content:
+                print("System: ERROR - old_content and new_content are the same. Can't apply hunk")
+                message += chat_message("system", "ERROR - old_content and new_content are the same. Can't apply hunk")
+                continue
+            
+            with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                new_content = file_content.replace(old_content, new_content)
+                f.write(new_content)
 
-                diff = list(
-                    difflib.unified_diff(
-                        file_content.splitlines(keepends=True),
-                        new_content.splitlines(keepends=True),
-                        fromfile="before",
-                        tofile="after",
-                    )
+            diff = list(
+                difflib.unified_diff(
+                    file_content.splitlines(keepends=True),
+                    new_content.splitlines(keepends=True),
+                    fromfile="before",
+                    tofile="after",
                 )
-                msg = "File updated:\n" + "".join(diff)
-                print("System: " + green(msg))
-                message += chat_message("system", msg)
-                file_edited = True
+            )
+            msg = "File updated:\n" + "".join(diff)
+            print("System: " + green(msg))
+            message += chat_message("system", msg)
+            file_edited = True
         
         if "<|finish|>" in response.content:
             if file_edited:
