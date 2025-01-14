@@ -440,7 +440,7 @@ def run_agent(
             prev = 1
             i = 1
             while i < len(diff_lines):
-                if diff_lines[i].startswith("@@") and diff_lines[i].endswith("@@"):
+                if diff_lines[i].startswith("@@"):
                     hunks.append(diff_lines[prev:i])
                     prev = i + 1
                 i += 1
