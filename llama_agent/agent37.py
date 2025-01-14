@@ -254,15 +254,7 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             - Don't leave out any lines or the diff patch won't apply correctly.
             - Indentation matters in the diffs!
 
-            Please make the necessary changes to the file to fix the problem. \
-
-            Before using the <|finish|> tag, confirm that:
-            1. All changes directly address the problem statement
-            2. The modified code maintains proper syntax
-            3. No unintended side effects are introduced
-
-            When you are done, use the <|finish|> tag to indicate that you are finished.
-            <|eot_id|>
+            Please make the necessary changes to the file to fix the problem.<|eot_id|>
             """
         )
 
