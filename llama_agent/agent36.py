@@ -210,15 +210,11 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
 
             You can make changes to the file by using a modified unified diff format like what `diff -U0` would produce.
 
-            For example:
-
-            I will:
-
-            1. Add an imports of sympy.
-            2. Remove the is_prime() function.
-            3. Replace the existing call to is_prime() with a call to sympy.isprime().
+            For example,
 
             ```diff
+            --- ...
+            +++ ...
             @@ ... @@
             -class MathWeb:
             +import sympy
@@ -255,9 +251,10 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
 
             File editing rules:
             - Return edits similar to unified diffs that `diff -U0` would produce.
+            - No need to include the file path in the diff.
+            - No need to include timestamps in the diff.
             - Start each hunk of changes with a `@@ ... @@` line.
-            - Don't include line numbers like `diff -U0` does.
-            - Don't leave out any lines or the diff patch won't apply correctly.
+            - No need to include line numbers like `diff -U0` does.
 
 
             Please make the necessary changes to the file to fix the problem. \
