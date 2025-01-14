@@ -426,6 +426,7 @@ def run_agent(
         message += response.content
         message += f"<|eot_id|>"
 
+        diff = response.content
         diff_lines = diff.splitlines()
 
         # Collect hunks by looking for @@ ... @@ lines
