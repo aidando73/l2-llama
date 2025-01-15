@@ -324,6 +324,46 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
                 "file_content": file_content
             },
         )
+    
+class Phase3PromptGenerator(PromptTemplateGeneratorBase):
+    def gen(self, problem_statement: str, repo: str, file_content: str, diffs: list[list[str]]) -> str:
+        template_str = textwrap.dedent(
+            """
+            <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+            
+            You are an expert software engineer. You are given the following problem:
+            <problem_statement>
+            {{ problem_statement }}
+            </problem_statement>
+
+            The repo is called {{ repo }}.
+
+            Here is the file content:
+            <file_content>
+            {{ file_content }}
+            </file_content>
+
+            Here are the diffs you generated:
+            {% for diff in diffs %}
+            <diff num="{{ loop.index }}">
+            {{ diff }}
+            </diff>
+            {% endfor %}
+
+            Please pick the best diff to apply to the file. Specify which diff you want to apply in <|diff_num|>.
+
+            For example, if you want to apply diff 1, you should write <|1|>. If you want to apply diff 2, you should write <|2|>.
+            """
+        )
+        return PromptTemplate(
+            template_str.lstrip("\n"),
+            {
+                "problem_statement": problem_statement,
+                "repo": repo,
+                "file_content": file_content,
+                "diffs": ["".join(diff) for diff in diffs],
+            },
+        )
 
 def run_agent(
     client: LlamaStackClient,
@@ -567,9 +607,40 @@ def run_agent(
     PHASE 3: Pick and apply diff
     """
     print("PHASE 3 " + "-" * 80)
-    for i, diff in enumerate(diffs):
-        print(f"Diff {i+1} " + "-" * 80)
-        print("".join(diff))
+    message = Phase3PromptGenerator() \
+        .gen(problem_statement=problem_statement, repo=repo, file_content=file_content, diffs=diffs) \
+        .render()
+    message += header("assistant")
+    print(f"Input tokens: {token_count(message)}")
+    response = client.inference.completion(
+        model_id=MODEL_ID,
+        content=message,
+        sampling_params=sampling_params,
+    )
+    message += response.content
+    message += f"<|eot_id|>"
+
+    print("Assistant: " + magenta(response.content))
+
+    if match := re.search(r"<\|(\d)\|>", response.content):
+        diff_num = int(match.group(1))
+        print(f"Chosen diff {diff_num}")
+    else:
+        print("No diff number found, choosing first diff")
+        diff_num = 1
+    
+    diff = diffs[diff_num - 1]
+    print("Applying diff: " + green("".join(diff)))
+
+    process = run(
+        ['git', 'apply'],
+        input="".join(diff).encode(),
+        cwd=os.path.join(sandbox_dir, repo),
+        capture_output=True
+    )
+
+    with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+        f.write(file_content)
     
     if eval_dir:
         with open(
