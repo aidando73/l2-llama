@@ -382,10 +382,9 @@ def run_agent(
             print(response.content)
             message += response.content
 
-        message += response.content
         message += f"<|eot_id|>"
 
-        if match := re.search(r"<file_content>(.*)</file_content>", response.content):
+        if match := re.search(r"<file_content>(.*)</file_content>", response_content):
             new_content = match.group(1)
 
             with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
@@ -404,11 +403,9 @@ def run_agent(
             print("System: " + green(msg))
             message += chat_message("system", msg)
             file_edited = True
-    
-    if file_edited:
-        print(blue("File edited successfully - finishing"))
-    else:
-        print(yellow("Max iterations reached"))
+        else:
+            print("No file content found in response")
+            break
     
     if eval_dir:
         with open(
