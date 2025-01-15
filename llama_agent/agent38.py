@@ -451,6 +451,7 @@ def run_agent(
                 sampling_params=sampling_params,
             )
             message += response.content
+            print("Assistant: " + magenta(response.content))
             message += f"<|eot_id|>"
             if "<|finish_id|>" in response.content:
                 print("File edited successfully - finishing")
