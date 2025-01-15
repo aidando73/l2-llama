@@ -406,8 +406,12 @@ def run_agent(
             print("System: " + green(msg))
             message += chat_message("system", msg)
             file_edited = True
+
+        if file_edited:
+            print("File edited successfully - finishing")
+            break
         else:
-            print("No file content found in response")
+            message += chat_message("system", "No edits successful - please try again")
             break
     
     if eval_dir:
