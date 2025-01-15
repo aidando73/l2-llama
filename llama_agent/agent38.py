@@ -380,7 +380,7 @@ def run_agent(
             )
             stop_reason = response.stop_reason
             response_content += response.content
-            print(response.content)
+            print(magenta(response.content))
             message += response.content
 
         message += f"<|eot_id|>"
