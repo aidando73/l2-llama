@@ -432,8 +432,7 @@ def run_agent(
         )
 
         if match := re.search(
-            # Only end tag because start tag was pre-seeded
-            r"(.*)</thought_process>", response.content, re.DOTALL
+            r"<thought_process>(.*)</thought_process>", response.content, re.DOTALL
         ):
             thought_process = match.group(1)
             message += thought_process
