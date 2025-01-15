@@ -370,7 +370,7 @@ def run_agent(
         message += header("assistant")
         stop_reason = None
         response_content = ""
-        while stop_reason != StopReason.end_of_turn and stop_reason != StopReason.end_of_message:
+        while stop_reason != StopReason.end_of_turn.value and stop_reason != StopReason.end_of_message.value:
             print(f"Input tokens: {token_count(message)}")
             response = client.inference.completion(
                 model_id=MODEL_ID,
