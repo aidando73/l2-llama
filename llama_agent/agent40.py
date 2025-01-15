@@ -550,14 +550,32 @@ def run_agent(
                 
                 if search not in file_content:
                     print("Fuzzy matching")
+                    dmp = diff_match_patch()
+                    # Source: https://github.com/Aider-AI/aider/blob/4251e976b3aa52c2a3af08da4b203d4d524c8e92/aider/coders/search_replace.py#L280C1-L293
+                    dmp.Diff_Timeout = 5
+                    dmp.Match_Threshold = 0.95
+                    dmp.Match_Distance = 500
+                    dmp.Match_MaxBits = 128
+                    dmp.Patch_Margin = 32
 
+                    diff = dmp.diff_main(search, replace, None)
+                    dmp.diff_cleanupSemantic(diff)
+                    dmp.diff_cleanupEfficiency(diff)
 
+                    patches = dmp.patch_make(search, diff)
+                    patches_text = dmp.patch_toText(patches)
+                    print("Fuzzy patch: " + patches_text)
 
-                    # If still no match, return error:
-                    msg = f"ERROR - edit {i} - <search> content not found in file. Please ensure that <search> is an exact match of the content you want to replace."
-                    print("System: " + red(msg))
-                    message += chat_message("system", msg)
-                    continue
+                    new_content, success = dmp.patch_apply(patches, file_content)
+                    if not all(success):
+                        print("Fuzzy match failed")
+                        # If still no match, return error:
+                        msg = f"ERROR - edit {i} - <search> content not found in file. Please ensure that <search> is an exact match of the content you want to replace."
+                        print("System: " + red(msg))
+                        message += chat_message("system", msg)
+                        continue
+                    else:
+                        print("Fuzzy match success")
                 else: # Do exact match
                     with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
                         new_content = file_content.replace(search, replace)
