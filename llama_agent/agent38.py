@@ -28,6 +28,7 @@ from textwrap import dedent
 import textwrap
 import difflib
 from pprint import pprint
+
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
 MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 
@@ -47,9 +48,14 @@ sampling_params = SamplingParams(
 tokenizer = Tokenizer.get_instance()
 formatter = ChatFormat(tokenizer)
 
+
 class Phase1PromptGenerator(PromptTemplateGeneratorBase):
     def gen(
-        self, problem_statement: str, sandbox_dir: str, repo: str, custom_tools: list[ToolDefinition]
+        self,
+        problem_statement: str,
+        sandbox_dir: str,
+        repo: str,
+        custom_tools: list[ToolDefinition],
     ) -> str:
         template_str = textwrap.dedent(
             """
@@ -147,6 +153,7 @@ class Phase1PromptGenerator(PromptTemplateGeneratorBase):
             },
         )
 
+
 PHASE1_TOOLS = [
     ToolDefinition(
         tool_name="list_files",
@@ -232,9 +239,10 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
                 "problem_statement": problem_statement,
                 "repo": repo,
                 "file_path": file_path,
-                "file_content": file_content
+                "file_content": file_content,
             },
         )
+
 
 def run_agent(
     client: LlamaStackClient,
@@ -245,7 +253,7 @@ def run_agent(
     eval_dir: Optional[str] = None,
     instance_id: Optional[str] = None,
 ) -> Tuple[Literal["changes_made", "no_changes_made"], str, Optional[str]]:
-    
+
     if relevant_file:
         # This skips phase 1 and gives phase 2 the relevant file
         # Useful for evals where we want to test phase 2 specifically
@@ -258,9 +266,16 @@ def run_agent(
     PHASE 1: Locate the relevant file
     """
     print("PHASE 1 " + "-" * 80)
-    message = Phase1PromptGenerator() \
-        .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, custom_tools=PHASE1_TOOLS) \
+    message = (
+        Phase1PromptGenerator()
+        .gen(
+            problem_statement=problem_statement,
+            sandbox_dir=sandbox_dir,
+            repo=repo,
+            custom_tools=PHASE1_TOOLS,
+        )
         .render()
+    )
 
     for i in range(PHASE1_ITERATIONS):
         if file_chosen:
@@ -273,7 +288,6 @@ def run_agent(
             content=message,
             sampling_params=sampling_params,
         )
-
 
         if "EXECUTE:" in response.content:
             # Sometimes the agent will respond with the EXECUTE statement
@@ -294,7 +308,7 @@ def run_agent(
         message += header("assistant")
         message += "EXECUTE: \n"
         # Pre-empt the tool call to prevent poor tool call formatting
-        raw_tool_call = '['
+        raw_tool_call = "["
         message += raw_tool_call
         print(f"Input tokens: {token_count(message)}")
         response = client.inference.completion(
@@ -325,7 +339,9 @@ def run_agent(
             print("Executing tool call: " + cyan(msg))
 
             try:
-                result, result_msg = execute_phase_1_tool_call(tool_name, tool_params, sandbox_dir, repo)
+                result, result_msg = execute_phase_1_tool_call(
+                    tool_name, tool_params, sandbox_dir, repo
+                )
             except Exception as e:
                 result, result_msg = ("error", f"ERROR - Calling tool: {tool_name} {e}")
 
@@ -342,7 +358,7 @@ def run_agent(
             if result == "success" and tool_name == "pick_file":
                 file_chosen = tool_params["path"]
                 break
-    
+
     if eval_dir:
         with open(
             os.path.join(eval_dir, "trajs", f"{instance_id}-phase-1-prompt.txt"), "w"
@@ -360,10 +376,17 @@ def run_agent(
     PHASE 2: Edit the file
     """
     print("PHASE 2 " + "-" * 80)
-    message = Phase2PromptGenerator() \
-        .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, file_path=file_chosen) \
+    message = (
+        Phase2PromptGenerator()
+        .gen(
+            problem_statement=problem_statement,
+            sandbox_dir=sandbox_dir,
+            repo=repo,
+            file_path=file_chosen,
+        )
         .render()
-    
+    )
+
     finished = False
     file_edited = False
     for i in range(PHASE2_ITERATIONS):
@@ -371,7 +394,10 @@ def run_agent(
         stop_reason = None
         response_content = "<file_content>\n"
         message += response_content
-        while stop_reason != StopReason.end_of_turn.value and stop_reason != StopReason.end_of_message.value:
+        while (
+            stop_reason != StopReason.end_of_turn.value
+            and stop_reason != StopReason.end_of_message.value
+        ):
             print(f"Input tokens: {token_count(message)}")
             response = client.inference.completion(
                 model_id=MODEL_ID,
@@ -385,7 +411,9 @@ def run_agent(
 
         message += f"<|eot_id|>"
 
-        if match := re.search(r"<file_content>(.*)</file_content>", response_content, re.DOTALL):
+        if match := re.search(
+            r"<file_content>(.*)</file_content>", response_content, re.DOTALL
+        ):
             new_content = match.group(1)
 
             with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
@@ -408,12 +436,32 @@ def run_agent(
             file_edited = True
 
         if file_edited:
-            print("File edited successfully - finishing")
-            break
+            message += chat_message(
+                "system",
+                (
+                    "Please review all the changes and ensure they are correct. "
+                    "If you are satisfied with the changes, please specify the <|finish_id|> tag to finish. "
+                    "If you are not satisfied with the changes, do not specify the <|finish_id|> tag and you will be given another chance to edit the file."
+                ),
+            )
+            print("Input tokens: " + str(token_count(message)))
+            message += header("assistant")
+            response = client.inference.completion(
+                model_id=MODEL_ID,
+                content=message,
+                sampling_params=sampling_params,
+            )
+            message += response.content
+            message += f"<|eot_id|>"
+            if "<|finish_id|>" in response.content:
+                print("File edited successfully - finishing")
+                break
+            else:
+                print("Continue editing file")
         else:
             message += chat_message("system", "No edits successful - please try again")
             break
-    
+
     if eval_dir:
         with open(
             os.path.join(eval_dir, "trajs", f"{instance_id}-phase-2-prompt.txt"), "w"
@@ -427,11 +475,14 @@ def run_agent(
 def header(role: Literal["user", "assistant", "system", "tool"]):
     return f"<|start_header_id|>{role}<|end_header_id|>\n\n"
 
+
 def token_count(message: str):
     return len(tokenizer.encode(message, bos=False, eos=False))
 
+
 def chat_message(role: Literal["user", "assistant", "system", "tool"], content: str):
     return f"<|start_header_id|>{role}<|end_header_id|>\n\n{content}<|eot_id|>"
+
 
 def parse_tool_calls(
     content,
@@ -467,18 +518,23 @@ def parse_tool_calls(
             result = [(name, params) for name, params in result]
             return result
         else:
-            return [(
-                "error",
-                "Tool call invalid syntax: " + content,
-            )]
+            return [
+                (
+                    "error",
+                    "Tool call invalid syntax: " + content,
+                )
+            ]
     except Exception as e:
-        return [(
-            "error",
-            "Tool call invalid syntax: Could not parse tool call: "
-            + content
-            + " "
-            + str(e),
-        )]
+        return [
+            (
+                "error",
+                "Tool call invalid syntax: Could not parse tool call: "
+                + content
+                + " "
+                + str(e),
+            )
+        ]
+
 
 def execute_phase_1_tool_call(
     tool_name: str, tool_params: dict[str, str], sandbox_dir: str, repo: str
@@ -534,15 +590,19 @@ def execute_phase_1_tool_call(
         return ("success", f"File picked - {tool_params['path']}")
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
-    
+
+
 def execute_phase_2_tool_call(
-    tool_name: str, tool_params: dict[str, str], sandbox_dir: str, repo: str, file_path: str
+    tool_name: str,
+    tool_params: dict[str, str],
+    sandbox_dir: str,
+    repo: str,
+    file_path: str,
 ) -> Union[Tuple[Literal["success"], str], Tuple[Literal["error"], str]]:
     if tool_name == "edit_file":
-        if (
-            error := validate_param_exists("new_str", tool_params)
-            or validate_param_exists("old_str", tool_params)
-        ):
+        if error := validate_param_exists(
+            "new_str", tool_params
+        ) or validate_param_exists("old_str", tool_params):
             return ("error", error)
 
         if tool_params["old_str"] == "":
@@ -551,12 +611,18 @@ def execute_phase_2_tool_call(
         path = os.path.join(sandbox_dir, repo, file_path)
         with open(f"{path}", "r") as f:
             file_content = f.read()
-        
+
         if tool_params["old_str"] not in file_content:
-            return ("error", "ERROR - old_str not found in file. Please ensure that old_str is an exact match of the content you want to replace.")
+            return (
+                "error",
+                "ERROR - old_str not found in file. Please ensure that old_str is an exact match of the content you want to replace.",
+            )
 
         if tool_params["old_str"] == tool_params["new_str"]:
-            return ("error", "ERROR - old_str and new_str are the same. Please ensure that new_str is different from old_str.")
+            return (
+                "error",
+                "ERROR - old_str and new_str are the same. Please ensure that new_str is different from old_str.",
+            )
 
         with open(f"{path}", "w") as f:
             old_str = tool_params["old_str"]
@@ -580,6 +646,7 @@ def execute_phase_2_tool_call(
         return ("success", "Task finished")
     else:
         return ("error", f"ERROR - Unknown tool: {tool_name}")
+
 
 def display_tool_params(tool_params: dict[str, str]):
     return (
