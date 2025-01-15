@@ -641,8 +641,6 @@ def run_agent(
     print(process.stdout.decode())
     print(process.stderr.decode())
 
-    
-    
     if eval_dir:
         with open(
             os.path.join(eval_dir, "trajs", f"{instance_id}-phase-2-prompt.txt"), "w"
