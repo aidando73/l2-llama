@@ -641,6 +641,10 @@ def run_agent(
     PHASE 3: Pick and apply diff
     """
     print("PHASE 3 " + "-" * 80)
+    print("Coosing from the following diffs:")
+    for i, diff in enumerate(diffs):
+        print(f"Diff {i+1} -------------------------------")
+        print("".join(diff))
     message = Phase3PromptGenerator() \
         .gen(problem_statement=problem_statement, repo=repo, file_content=file_content, diffs=diffs) \
         .render()
