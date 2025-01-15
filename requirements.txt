@@ -6,3 +6,4 @@ llama-stack-client
 llama-models
 # Required for llama-models
 blobfile
+diff-match-patch
