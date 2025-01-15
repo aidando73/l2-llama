@@ -489,14 +489,20 @@ def run_agent(
                 message += chat_message("system", msg)
                 continue
 
+            if search == "":
+                msg = f"ERROR - edit {i} - <search> content is empty. Please ensure that <search> is an exact match of the content you want to replace."
+                print("System: " + red(msg))
+                message += chat_message("system", msg)
+                continue
+
             if search not in file_content:
-                msg = f"ERROR - edit {i} - <search> not found in file. Please ensure that <search> is an exact match of the content you want to replace."
+                msg = f"ERROR - edit {i} - <search> content not found in file. Please ensure that <search> is an exact match of the content you want to replace."
                 print("System: " + red(msg))
                 message += chat_message("system", msg)
                 continue
 
             if search == replace:
-                msg = f"ERROR - edit {i} - <search> and <replace> are the same. Please ensure that <replace> is different from <search>."
+                msg = f"ERROR - edit {i} - <search> content and <replace> content are the same. Please ensure that <replace> content is different from <search> content."
                 print("System: " + red(msg))
                 message += chat_message("system", msg)
                 continue
