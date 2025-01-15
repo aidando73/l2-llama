@@ -603,6 +603,15 @@ def run_agent(
         else:
             print(yellow("Max iterations reached"))
 
+    if eval_dir:
+        with open(
+            os.path.join(eval_dir, "trajs", f"{instance_id}-phase-2-prompt.txt"), "w"
+        ) as f:
+            f.write(message)
+    else:
+        with open("prompt.txt", "w") as f:
+            f.write(message)
+
     """
     PHASE 3: Pick and apply diff
     """
@@ -643,7 +652,7 @@ def run_agent(
 
     if eval_dir:
         with open(
-            os.path.join(eval_dir, "trajs", f"{instance_id}-phase-2-prompt.txt"), "w"
+            os.path.join(eval_dir, "trajs", f"{instance_id}-phase-3-prompt.txt"), "w"
         ) as f:
             f.write(message)
     else:
