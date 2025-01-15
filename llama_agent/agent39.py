@@ -452,13 +452,13 @@ def run_agent(
     PHASE 2: Generate diffs
     """
     print("PHASE 2 " + "-" * 80)
-    message = Phase2PromptGenerator() \
-        .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, file_path=file_chosen) \
-        .render()
     diffs = []
     for i in range(DIFF_NUM):
         finished = False
         file_edited = False
+        message = Phase2PromptGenerator() \
+            .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, file_path=file_chosen) \
+            .render()
         for i in range(PHASE2_ITERATIONS):
             message += header("assistant")
             print(f"Input tokens: {token_count(message)}")
