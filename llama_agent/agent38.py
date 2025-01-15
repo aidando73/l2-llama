@@ -33,7 +33,7 @@ MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 
 # 512 is the default for fireworks on Llama-stack
 # 4096 seems to be the max - https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct/discussions/6
-MAX_OUTPUT_TOKENS = 2048
+MAX_OUTPUT_TOKENS = 4096
 
 PHASE1_ITERATIONS = 10
 PHASE2_ITERATIONS = 10
