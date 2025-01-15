@@ -583,8 +583,8 @@ def run_agent(
                         difflib.unified_diff(
                             original_content.splitlines(keepends=True),
                             file_content.splitlines(keepends=True),
-                            fromfile="before",
-                            tofile="after",
+                            fromfile=file_chosen,
+                            tofile=file_chosen,
                         )
                     )
                     diffs.append(diff)
