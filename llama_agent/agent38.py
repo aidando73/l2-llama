@@ -369,7 +369,8 @@ def run_agent(
     for i in range(PHASE2_ITERATIONS):
         message += header("assistant")
         stop_reason = None
-        response_content = ""
+        response_content = "<file_content>\n"
+        message += response_content
         while stop_reason != StopReason.end_of_turn.value and stop_reason != StopReason.end_of_message.value:
             print(f"Input tokens: {token_count(message)}")
             response = client.inference.completion(
