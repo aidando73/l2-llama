@@ -404,6 +404,7 @@ def run_agent(
     for i in range(PHASE2_ITERATIONS):
         message += header("assistant")
         print(f"Input tokens: {token_count(message)}")
+        message += "```diff\n"
         message += f"--- {{ file_path }}\n"
         message += f"+++ {{ file_path }}\n"
         message += f"@@"
@@ -420,6 +421,12 @@ def run_agent(
 
         diff = response.content
         diff_lines = diff.splitlines()
+
+        # Find the first line with ```
+        for i, line in enumerate(diff_lines):
+            if line.startswith("```"):
+                diff_lines = diff_lines[:i]
+                break
 
         # Collect hunks by looking for @@ ... @@ lines
         hunks = []
