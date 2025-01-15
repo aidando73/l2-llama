@@ -538,6 +538,7 @@ def run_agent(
                     finished = True
                     with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
                         file_content = f.read()
+                    print("Saving diff")
                     diff = list(
                         difflib.unified_diff(
                             original_content.splitlines(keepends=True),
@@ -547,6 +548,10 @@ def run_agent(
                         )
                     )
                     diffs.append(diff)
+
+                    # Reset the file to the original content
+                    with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                        f.write(original_content)
                     break
                 else:
                     msg = "ERROR - No changes made to file. Please ensure you have made at least one change to the file."
