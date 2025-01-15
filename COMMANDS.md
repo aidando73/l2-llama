@@ -186,7 +186,7 @@ python eval9.py --eval_dir $eval_dir
 
 
 # Phase 2 gold
-version=v39.3-apply && \
+version=v39.3-with-phase-1 && \
 eval_dir=$(realpath evals/$version) && \
 mkdir -p $eval_dir && \
 python eval10.py --eval_dir $eval_dir --skip_phase_1 --num_workers 8
