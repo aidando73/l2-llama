@@ -390,6 +390,8 @@ def run_agent(
             with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
                 file_content = f.read()
 
+            with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                f.write(new_content)
 
             diff = list(
                 difflib.unified_diff(
