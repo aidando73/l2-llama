@@ -370,6 +370,7 @@ def run_agent(
         message += header("assistant")
         stop_reason = None
         response_content = ""
+        print("Assistant: ")
         while stop_reason != StopReason.end_of_turn:
             print(f"Input tokens: {token_count(message)}")
             response = client.inference.completion(
@@ -379,9 +380,8 @@ def run_agent(
             )
             stop_reason = response.stop_reason
             response_content += response.content
+            print(response.content)
             message += response.content
-
-        print("Assistant: " + magenta(response_content))
 
         message += response.content
         message += f"<|eot_id|>"
