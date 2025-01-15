@@ -384,7 +384,7 @@ def run_agent(
 
         message += f"<|eot_id|>"
 
-        if match := re.search(r"<file_content>(.*)</file_content>", response_content):
+        if match := re.search(r"<file_content>(.*)</file_content>", response_content, re.DOTALL):
             new_content = match.group(1)
 
             with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
