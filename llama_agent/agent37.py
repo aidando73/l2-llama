@@ -212,6 +212,7 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
 
             For example:
 
+            <diff>
             --- {{ file_path }}
             +++ {{ file_path }}
             @@ ... @@
@@ -246,6 +247,7 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             +        if sympy.isprime(num):
             +            count += 1
             +    return str(num)
+            </diff>
 
             File editing rules:
             - Return edits similar to unified diffs that `diff -U0` would produce.
@@ -253,6 +255,7 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             - No need to include line numbers like `diff -U0` does.
             - Don't leave out any lines or the diff patch won't apply correctly.
             - Indentation matters in the diffs!
+            - Put the diff in <diff></diff> tags.
 
             Please make the necessary changes to the file to fix the problem.<|eot_id|>
             """
@@ -404,7 +407,7 @@ def run_agent(
     for i in range(PHASE2_ITERATIONS):
         message += header("assistant")
         print(f"Input tokens: {token_count(message)}")
-        message += "```diff\n"
+        message += "<diff>\n"
         message += f"--- {{ file_path }}\n"
         message += f"+++ {{ file_path }}\n"
         message += f"@@"
@@ -420,13 +423,13 @@ def run_agent(
         message += f"<|eot_id|>"
 
         diff = response.content
+
+        # Find </diff> and truncate the response
+        if "</diff>" in response.content:
+            diff = response.content[:response.content.find("</diff>")]
+
         diff_lines = diff.splitlines()
 
-        # Find the first line with ```
-        for i, line in enumerate(diff_lines):
-            if line.startswith("```"):
-                diff_lines = diff_lines[:i]
-                break
 
         # Collect hunks by looking for @@ ... @@ lines
         hunks = []
