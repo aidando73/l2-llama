@@ -430,19 +430,11 @@ def run_agent(
             content=message,
             sampling_params=sampling_params,
         )
-
-        if match := re.search(
-            r"<thought_process>(.*)</thought_process>", response.content, re.DOTALL
-        ):
-            thought_process = match.group(1)
-            message += thought_process
-            message += "</thought_process>"
-            print("THOUGHT PROCESS:")
-            print(magenta(thought_process))
-        else:
-            print("No thought process found")
-
+        message += response.content
         message += f"<|eot_id|>"
+
+        print("THOUGHT PROCESS:")
+        print(magenta(response.content))
 
         # Editing
         message += header("assistant")
