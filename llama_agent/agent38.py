@@ -436,14 +436,13 @@ def run_agent(
             file_edited = True
 
         if file_edited:
-            message += chat_message(
-                "system",
-                (
-                    "Please review all the changes and ensure they are correct. "
-                    "If you are satisfied with the changes, please specify the <|finish_id|> tag to finish. "
-                    "If you are not satisfied with the changes, do not specify the <|finish_id|> tag and you will be given another chance to edit the file."
-                ),
+            msg = (
+                "Please review all the changes and ensure they are correct. "
+                "If you are satisfied with the changes, please specify the <|finish_id|> tag to finish. "
+                "If you are not satisfied with the changes, do not specify the <|finish_id|> tag and you will be given another chance to edit the file."
             )
+            message += chat_message("system", msg)
+            print("System: " + blue(msg))
             print("Input tokens: " + str(token_count(message)))
             message += header("assistant")
             response = client.inference.completion(
