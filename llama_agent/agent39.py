@@ -37,6 +37,7 @@ MAX_OUTPUT_TOKENS = 2048
 
 PHASE1_ITERATIONS = 10
 PHASE2_ITERATIONS = 10
+DIFF_NUM = 5
 
 sampling_params = SamplingParams(
     strategy="greedy",
@@ -443,104 +444,127 @@ def run_agent(
     if file_chosen is None:
         print("No file chosen - exiting")
         return ("no_changes_made", "", None)
+    
+    with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
+        original_content = f.read()
 
     """
-    PHASE 2: Edit the file
+    PHASE 2: Generate diffs
     """
     print("PHASE 2 " + "-" * 80)
     message = Phase2PromptGenerator() \
         .gen(problem_statement=problem_statement, sandbox_dir=sandbox_dir, repo=repo, file_path=file_chosen) \
         .render()
-    
-    finished = False
-    file_edited = False
-    for i in range(PHASE2_ITERATIONS):
-        message += header("assistant")
-        print(f"Input tokens: {token_count(message)}")
-        response = client.inference.completion(
-            model_id=MODEL_ID,
-            content=message,
-            sampling_params=sampling_params,
-        )
-
-        print("Assistant: " + magenta(response.content))
-
-        message += response.content
-        message += f"<|eot_id|>"
-
-        with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
-            file_content = f.read()
-        
-        response_content = response.content
-        i = 0
-        while search_match := re.search(r"<search>(.*?)</search>", response_content, re.DOTALL):
-            i += 1
-            search = search_match.group(1)
-            response_content = response_content[search_match.end():]
-
-            replace_pattern = r"<replace>(.*?)</replace>"
-            replace_match = re.search(replace_pattern, response_content, re.DOTALL)
-            if replace_match:
-                replace = replace_match.group(1)
-                response_content = response_content[replace_match.end():]
-            else:
-                msg = f"ERROR - edit {i} - <replace> not found in response. Please ensure there is a following <replace></replace> tag for every <search></search> tag."
-                print("System: " + red(msg))
-                message += chat_message("system", msg)
-                continue
-
-            if search == "":
-                msg = f"ERROR - edit {i} - <search> content is empty. Please ensure that <search> is an exact match of the content you want to replace."
-                print("System: " + red(msg))
-                message += chat_message("system", msg)
-                continue
-
-            if search not in file_content:
-                msg = f"ERROR - edit {i} - <search> content not found in file. Please ensure that <search> is an exact match of the content you want to replace."
-                print("System: " + red(msg))
-                message += chat_message("system", msg)
-                continue
-
-            if search == replace:
-                msg = f"ERROR - edit {i} - <search> content and <replace> content are the same. Please ensure that <replace> content is different from <search> content."
-                print("System: " + red(msg))
-                message += chat_message("system", msg)
-                continue
-
-            with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                new_content = file_content.replace(search, replace)
-                f.write(new_content)
-            
-            diff = list(
-                difflib.unified_diff(
-                    file_content.splitlines(keepends=True),
-                    new_content.splitlines(keepends=True),
-                    fromfile="before",
-                    tofile="after",
-                )
+    diffs = []
+    for i in range(DIFF_NUM):
+        finished = False
+        file_edited = False
+        for i in range(PHASE2_ITERATIONS):
+            message += header("assistant")
+            print(f"Input tokens: {token_count(message)}")
+            response = client.inference.completion(
+                model_id=MODEL_ID,
+                content=message,
+                sampling_params=sampling_params,
             )
-            msg = "File successfully updated:\n" + "".join(diff)
-            print("System: " + green("File successfully updated:"))
-            print("".join(diff))
-            message += chat_message("system", msg)
-            file_edited = True
-        
-        if "<|finish|>" in response.content:
-            if file_edited:
-                msg = "Task marked as finished"
-                print("System: " + blue(msg))
+
+            print("Assistant: " + magenta(response.content))
+
+            message += response.content
+            message += f"<|eot_id|>"
+
+            with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
+                file_content = f.read()
+            
+            response_content = response.content
+            i = 0
+            while search_match := re.search(r"<search>(.*?)</search>", response_content, re.DOTALL):
+                i += 1
+                search = search_match.group(1)
+                response_content = response_content[search_match.end():]
+
+                replace_pattern = r"<replace>(.*?)</replace>"
+                replace_match = re.search(replace_pattern, response_content, re.DOTALL)
+                if replace_match:
+                    replace = replace_match.group(1)
+                    response_content = response_content[replace_match.end():]
+                else:
+                    msg = f"ERROR - edit {i} - <replace> not found in response. Please ensure there is a following <replace></replace> tag for every <search></search> tag."
+                    print("System: " + red(msg))
+                    message += chat_message("system", msg)
+                    continue
+
+                if search == "":
+                    msg = f"ERROR - edit {i} - <search> content is empty. Please ensure that <search> is an exact match of the content you want to replace."
+                    print("System: " + red(msg))
+                    message += chat_message("system", msg)
+                    continue
+
+                if search not in file_content:
+                    msg = f"ERROR - edit {i} - <search> content not found in file. Please ensure that <search> is an exact match of the content you want to replace."
+                    print("System: " + red(msg))
+                    message += chat_message("system", msg)
+                    continue
+
+                if search == replace:
+                    msg = f"ERROR - edit {i} - <search> content and <replace> content are the same. Please ensure that <replace> content is different from <search> content."
+                    print("System: " + red(msg))
+                    message += chat_message("system", msg)
+                    continue
+
+                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                    new_content = file_content.replace(search, replace)
+                    f.write(new_content)
+                
+                diff = list(
+                    difflib.unified_diff(
+                        file_content.splitlines(keepends=True),
+                        new_content.splitlines(keepends=True),
+                        fromfile="before",
+                        tofile="after",
+                    )
+                )
+                msg = "File successfully updated:\n" + "".join(diff)
+                print("System: " + green("File successfully updated:"))
+                print("".join(diff))
                 message += chat_message("system", msg)
-                finished = True
-                break
-            else:
-                msg = "ERROR - No changes made to file. Please ensure you have made at least one change to the file."
-                print("System: " + red(msg))
-                message += chat_message("system", msg)
+                file_edited = True
+            
+            if "<|finish|>" in response.content:
+                if file_edited:
+                    msg = "Task marked as finished"
+                    print("System: " + blue(msg))
+                    message += chat_message("system", msg)
+                    finished = True
+                    with open(os.path.join(sandbox_dir, repo, file_chosen), "r") as f:
+                        file_content = f.read()
+                    diff = list(
+                        difflib.unified_diff(
+                            original_content.splitlines(keepends=True),
+                            file_content.splitlines(keepends=True),
+                            fromfile="before",
+                            tofile="after",
+                        )
+                    )
+                    diffs.append(diff)
+                    break
+                else:
+                    msg = "ERROR - No changes made to file. Please ensure you have made at least one change to the file."
+                    print("System: " + red(msg))
+                    message += chat_message("system", msg)
     
-    if finished:
-        print(blue("Agent marked as finished"))
-    else:
-        print(yellow("Max iterations reached"))
+        if finished:
+            print(blue("Agent marked as finished"))
+        else:
+            print(yellow("Max iterations reached"))
+
+    """
+    PHASE 3: Pick and apply diff
+    """
+    print("PHASE 3 " + "-" * 80)
+    for i, diff in enumerate(diffs):
+        print(f"Diff {i+1} " + "-" * 80)
+        print("".join(diff))
     
     if eval_dir:
         with open(
