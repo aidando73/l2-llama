@@ -215,7 +215,38 @@ class Phase2PromptGenerator(PromptTemplateGeneratorBase):
             {{ file_content }}
             </file_content>
 
-            Please replace the file content with new content in <file_content></file_content> tags. For example:
+            First, provide your analysis and reasoning in <throught_process> tags. Your thought process should include:
+            1. Problem Analysis: Clear identification of the issue
+            2. Current Implementation Review: Strengths and weaknesses of existing code
+            3. Solution Strategy: Your approach to solving the problem
+            4. Consideration of Alternatives: Other possible solutions and why they were rejected
+            5. Impact Assessment: Potential effects of your proposed changes
+
+            For example:
+            <thought_process>
+            1. Problem Analysis:
+            - The code lacks proper error handling
+            - Performance bottleneck identified in the main loop
+
+            2. Current Implementation Review:
+            - Good: Clear variable naming
+            - Issue: Inefficient algorithm complexity
+
+            3. Solution Strategy:
+            - Implement try-catch blocks
+            - Optimize loop with better data structure
+
+            4. Alternatives Considered:
+            - Considered using async/await but not necessary for this case
+            - Rejected complete rewrite as too risky
+
+            5. Impact Assessment:
+            - Changes will improve error resilience
+            - Minor memory usage increase, significant performance gain
+            </thought_process>
+
+            After providing your thought process, implement your solution.
+            Provide your modified file content within <file_content></file_content> tags. For example:
 
             <file_content>
             import os
@@ -390,6 +421,22 @@ def run_agent(
     finished = False
     file_edited = False
     for i in range(PHASE2_ITERATIONS):
+        # Thought process
+        message += header("assistant")
+        message += "<thought_process>\n"
+        print("Input tokens: " + str(token_count(message)))
+        response = client.inference.completion(
+            model_id=MODEL_ID,
+            content=message,
+            sampling_params=sampling_params,
+        )
+        message += response.content
+        message += f"<|eot_id|>"
+
+        print("THOUGHT PROCESS:")
+        print(magenta(response.content))
+
+        # Editing
         message += header("assistant")
         stop_reason = None
         response_content = "<file_content>\n"
