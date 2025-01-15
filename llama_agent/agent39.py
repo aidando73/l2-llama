@@ -642,7 +642,7 @@ def run_agent(
     print("Applying diff: " + green("".join(diff)))
 
     process = run(
-        ['git', 'apply', '--verbose'],
+        ['git', 'apply', '--verbose', '-p1'],
         input="".join(diff).encode(),
         cwd=os.path.join(sandbox_dir, repo),
         capture_output=True
