@@ -638,9 +638,10 @@ def run_agent(
         cwd=os.path.join(sandbox_dir, repo),
         capture_output=True
     )
+    print(process.stdout.decode())
+    print(process.stderr.decode())
 
-    with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-        f.write(file_content)
+    
     
     if eval_dir:
         with open(
