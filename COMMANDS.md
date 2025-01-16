@@ -199,6 +199,10 @@ eval_dir=$(realpath swe-evals)/v33.7 \
 eval_dir=$(realpath swe-evals)/v33.7 \
     && mkdir -p $eval_dir \
     && python -u swe-eval10.py --eval_dir $eval_dir
+
+eval_dir=$(realpath fine-tune)/v33 \
+    && mkdir -p $eval_dir \
+    && python -u swe-eval10.py --eval_dir $eval_dir
 ```
 
 Dependencies:
