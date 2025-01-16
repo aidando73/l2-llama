@@ -28,6 +28,7 @@ from textwrap import dedent
 import textwrap
 import difflib
 from diff_match_patch import diff_match_patch
+from urllib.parse import unquote
 
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
 MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
@@ -547,8 +548,18 @@ def run_agent(
                     message += chat_message("system", msg)
                     continue
 
+                # First try exact match
+                if search in file_content:
+                    print("Exact match")
+                    file_content = file_content.replace(search, replace)
                 
-                if search not in file_content:
+                # Then try indent aware match
+                if search in file_content:
+                    new_content = indent_aware_replace(file_content, search, replace)
+                    if new_content is not None:
+                        print("Indent aware match")
+
+                if new_content is None:
                     print("Fuzzy matching")
                     dmp = diff_match_patch()
                     # Source: https://github.com/Aider-AI/aider/blob/4251e976b3aa52c2a3af08da4b203d4d524c8e92/aider/coders/search_replace.py#L280C1-L293
@@ -564,7 +575,7 @@ def run_agent(
 
                     patches = dmp.patch_make(search, diff)
                     patches_text = dmp.patch_toText(patches)
-                    print("Fuzzy patch: " + patches_text)
+                    print("Fuzzy patch: " + unquote(patches_text))
 
                     new_content, success = dmp.patch_apply(patches, file_content)
                     if not all(success):
@@ -576,11 +587,7 @@ def run_agent(
                         continue
                     else:
                         print("Fuzzy match success")
-                else: # Do exact match
-                    with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                        new_content = file_content.replace(search, replace)
-                        f.write(new_content)
-                
+
                 diff = list(
                     difflib.unified_diff(
                         file_content.splitlines(keepends=True),
@@ -912,4 +919,83 @@ def validate_directory_exists(sandbox_dir: str, repo: str, path: str) -> Optiona
     resolved_path = os.path.abspath(os.path.join(sandbox_dir, repo, path))
     if not os.path.exists(resolved_path):
         return f"ERROR - Directory {path} does not exist. Please ensure the directory exists."
+    return None
+
+def indent_aware_replace(old_file_content: str, old_content: str, new_content: str):
+    """
+    Replaces old_content with new_content in old_file_content.
+    Does so without worring about identation
+    We count the indentation of old_file_content
+    Remove all leading whitespace from old_content and new_content
+    And then add it back in at the end
+
+    If there is no match, return the original file content
+    """
+
+    from math import inf
+    def get_common_indentation(lines: list[str]) -> str:
+        """
+        Returns:
+            Tuple[int, Optional[str]]:
+                - indent_char (Optional[str]): The character type of the indentation, either " " or "\t" or '' if no whitespace
+                - common_indentation (int): The common indentation of the lines
+        """
+        # Find minimum indentation
+        whitespace_count = []
+        for line in lines:
+            if line.strip() == "":
+                # Skip empty lines
+                continue
+            if match := re.match(r'^[ \t]+', line):
+                whitespace_count.append(len(match.group(0)))
+            else:
+                whitespace_count.append(0)
+        
+        if not whitespace_count:
+            return '', 0
+
+        common_indentation = min(whitespace_count)
+
+        if common_indentation == 0:
+            return '', 0
+        else:
+            # If there is common indentation, we can just find the indent_char on the first non-empty line
+            for line in lines:
+                if line.strip() == "":
+                    continue
+                indent_char = line[0]
+                break
+            return indent_char, common_indentation
+
+    old_file_content_lines = old_file_content.splitlines(keepends=True)
+    old_content_lines = old_content.splitlines(keepends=True)
+
+    if len(old_content_lines) > len(old_file_content_lines):
+        return old_file_content
+
+    m = len(old_content_lines)
+    # print("Indentation aware edit")
+    # print(f"m: {m}")
+    for i in range(len(old_file_content_lines) - m + 1):
+        lines = old_file_content_lines[i:i + m]
+        indent_char, common_indentation = get_common_indentation(lines)
+        indent_char_repr = "\\s" if indent_char == " " else "\\t"
+        # print(f"i: {i}" + "-" * 100)
+        # print(f"indent_char: {indent_char_repr}, common_indentation: {common_indentation}")
+
+        # Check if the old content is in the dedented content
+        content_dedented = dedent("".join(lines))
+        old_content_dedented = dedent(old_content)
+        if old_content_dedented in content_dedented:
+            new_file_dedented = dedent(new_content)
+            content_dedented = content_dedented.replace(old_content_dedented, new_file_dedented)
+            content_dedented = content_dedented.splitlines(keepends=True)
+            res = ""
+            for line in content_dedented:
+                if line.strip() == "":
+                    res += line
+                else:
+                    res += indent_char * common_indentation + line
+            return "".join(old_file_content_lines[:i]) + res + "".join(old_file_content_lines[i + m:])
+
     return None
