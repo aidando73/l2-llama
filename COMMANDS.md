@@ -211,13 +211,22 @@ python -m swebench.harness.run_evaluation \
     --dataset_name princeton-nlp/SWE-bench \
     --split train \
     --run_id $version
+
+version=v33-nebius && \
+python -m swebench.harness.run_evaluation \
+    --predictions_path fine-tune/$version/all_preds.jsonl \
+    --max_workers 16 \
+    --dataset_name nebius/SWE-bench-extra \
+    --split train \
+    --run_id $version
 ```
 
 ```python
+# Add to env/lib/python3.10/site-packages/swebench/harness/constants.py
 from collections import defaultdict
 from swebench.harness.log_parsers import parse_log_pytest, MAP_REPO_TO_PARSER
 MAP_VERSION_TO_INSTALL_PLACEHOLDER = {
-    "": {
+    0: {
         "python": "3.9",
         "packages": "requirements.txt",
         "pip_packages": [
