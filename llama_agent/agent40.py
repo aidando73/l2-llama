@@ -555,7 +555,7 @@ def run_agent(
                     new_content = file_content.replace(search, replace)
                 
                 # Then try indent aware match
-                if new_content is None:
+                if search in file_content:
                     new_content = indent_aware_replace(file_content, search, replace)
                     if new_content is not None:
                         print("Indent aware match")
