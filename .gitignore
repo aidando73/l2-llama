@@ -15,3 +15,4 @@ worker_0.log
 .DS_Store
 .aider*
 .envrc
+fine-tune/
