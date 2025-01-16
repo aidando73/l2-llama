@@ -186,7 +186,11 @@ python eval9.py --eval_dir $eval_dir
 
 
 # Phase 2 gold
+<<<<<<< Updated upstream
 version=v40.2-indent-aware-replace && \
+=======
+version=v40.2-405B && \
+>>>>>>> Stashed changes
 eval_dir=$(realpath evals/$version) && \
 mkdir -p $eval_dir && \
 python eval10.py --eval_dir $eval_dir --skip_phase_1 --num_workers 8
