@@ -194,6 +194,11 @@ python eval10.py --eval_dir $eval_dir --skip_phase_1 --num_workers 8
 eval_dir=$(realpath swe-evals)/v33.7 \
     && mkdir -p $eval_dir \
     && python -u swe-eval10.py --eval_dir $eval_dir
+
+
+eval_dir=$(realpath swe-evals)/v33.7 \
+    && mkdir -p $eval_dir \
+    && python -u swe-eval10.py --eval_dir $eval_dir
 ```
 
 Dependencies:
