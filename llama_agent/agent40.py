@@ -594,9 +594,27 @@ def run_agent(
                 print("".join(diff))
                 message += chat_message("system", msg)
                 file_edited = True
-            
-            if "<|finish|>" in response.content:
-                if file_edited:
+
+            if file_edited:
+                msg = (
+                    "Please review all the changes and ensure they are correct. "
+                    "If you are satisfied with the changes, please specify the <|finish_id|> tag to finish. "
+                    "If you want to continue editing the file, do not specify the <|finish_id|> tag and you will be given another chance to edit the file."
+                )
+                message += chat_message("system", msg)
+                print("System: " + blue(msg))
+                print("Input tokens: " + str(token_count(message)))
+                message += header("assistant")
+                response = client.inference.completion(
+                    model_id=MODEL_ID,
+                    content=message,
+                    sampling_params=sampling_params,
+                )
+                message += response.content
+                print("Assistant: " + magenta(response.content))
+                message += f"<|eot_id|>"
+                if "<|finish_id|>" in response.content:
+                    print("File edited successfully - finishing")
                     msg = "Task marked as finished"
                     print("System: " + blue(msg))
                     message += chat_message("system", msg)
@@ -613,15 +631,14 @@ def run_agent(
                         )
                     )
                     diffs.append(diff)
-
-                    # Reset the file to the original content
-                    with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                        f.write(original_content)
                     break
                 else:
-                    msg = "ERROR - No changes made to file. Please ensure you have made at least one change to the file."
-                    print("System: " + red(msg))
-                    message += chat_message("system", msg)
+                    print("Continue editing file")
+
+                # Reset the file to the original content
+                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                    f.write(original_content)
+                break
     
         if finished:
             print(blue("Agent marked as finished"))
