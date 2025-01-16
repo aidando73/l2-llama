@@ -548,10 +548,11 @@ def run_agent(
                     message += chat_message("system", msg)
                     continue
 
+                new_content = None
                 # First try exact match
                 if search in file_content:
                     print("Exact match")
-                    file_content = file_content.replace(search, replace)
+                    new_content = file_content.replace(search, replace)
                 
                 # Then try indent aware match
                 if search in file_content:
