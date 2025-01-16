@@ -631,14 +631,13 @@ def run_agent(
                         )
                     )
                     diffs.append(diff)
+                    # Reset the file to the original content
+                    with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                        f.write(original_content)
                     break
                 else:
                     print("Continue editing file")
 
-                # Reset the file to the original content
-                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                    f.write(original_content)
-                break
     
         if finished:
             print(blue("Agent marked as finished"))
