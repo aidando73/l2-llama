@@ -28,6 +28,7 @@ from textwrap import dedent
 import textwrap
 import difflib
 from diff_match_patch import diff_match_patch
+from urllib.parse import unquote
 
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
 MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
@@ -547,8 +548,19 @@ def run_agent(
                     message += chat_message("system", msg)
                     continue
 
+                new_content = None
+                # First try exact match
+                if search in file_content:
+                    print("Exact match")
+                    new_content = file_content.replace(search, replace)
                 
-                if search not in file_content:
+                # Then try indent aware match
+                if search in file_content:
+                    new_content = indent_aware_replace(file_content, search, replace)
+                    if new_content is not None:
+                        print("Indent aware match")
+
+                if new_content is None:
                     print("Fuzzy matching")
                     dmp = diff_match_patch()
                     # Source: https://github.com/Aider-AI/aider/blob/4251e976b3aa52c2a3af08da4b203d4d524c8e92/aider/coders/search_replace.py#L280C1-L293
@@ -564,7 +576,7 @@ def run_agent(
 
                     patches = dmp.patch_make(search, diff)
                     patches_text = dmp.patch_toText(patches)
-                    print("Fuzzy patch: " + patches_text)
+                    print("Fuzzy patch: " + unquote(patches_text))
 
                     new_content, success = dmp.patch_apply(patches, file_content)
                     if not all(success):
@@ -576,11 +588,10 @@ def run_agent(
                         continue
                     else:
                         print("Fuzzy match success")
-                else: # Do exact match
-                    with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                        new_content = file_content.replace(search, replace)
-                        f.write(new_content)
-                
+                    
+                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
+                    f.write(new_content)
+
                 diff = list(
                     difflib.unified_diff(
                         file_content.splitlines(keepends=True),
