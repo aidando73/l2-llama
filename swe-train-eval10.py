@@ -16,7 +16,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SANDBOX_DIR = os.path.join(SCRIPT_DIR, "sandbox")
 
 def main():
-    df = swebench.to_pandas()
+
 
     if len(sys.argv) == 0:
         raise ValueError("Please provide an evaluation directory under swe-evals/")
@@ -37,6 +37,15 @@ def main():
     num_instances = args.num_instances
     num_workers = args.num_workers
 
+    # Create eval directory if it doesn't exist
+    os.makedirs(eval_dir, exist_ok=True)
+    # Create subdirectories for logs and trajectories
+    os.makedirs(os.path.join(eval_dir, "trajs"), exist_ok=True)
+
+    df = swebench.to_pandas()
+    df = df.sample(n=500, random_state=42)
+    df.to_csv(f"{eval_dir}/swe-train-500.parquet", index=False)
+
     # Check if all_preds.jsonl already exists
     already_processed = set()
     if os.path.exists(os.path.join(eval_dir, "all_preds.jsonl")):
@@ -46,12 +55,6 @@ def main():
 
     print(f"Resuming progress. Already processed {len(already_processed)} instances")
     df = df[~df["instance_id"].isin(already_processed)]
-
-
-    # Create eval directory if it doesn't exist
-    os.makedirs(eval_dir, exist_ok=True)
-    # Create subdirectories for logs and trajectories
-    os.makedirs(os.path.join(eval_dir, "trajs"), exist_ok=True)
 
     # Get line count of llama-stack.log
     log_path = os.path.expanduser("~/dev/llama-stack/llama-stack.log")
