@@ -589,9 +589,6 @@ def run_agent(
                     else:
                         print("Fuzzy match success")
 
-                with open(os.path.join(sandbox_dir, repo, file_chosen), "w") as f:
-                    f.write(new_content)
-
                 diff = list(
                     difflib.unified_diff(
                         file_content.splitlines(keepends=True),
