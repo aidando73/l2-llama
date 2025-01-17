@@ -137,6 +137,7 @@ stdbuf -o0 tee -a logs/$log_file
 
 
 # Llama stack setup
+cd ~/dev && git clone git@github.com:aidando73/llama-stack.git
 cd ~/dev/llama-stack && screen -S llama-stack
 
 # Fireworks build from source
@@ -186,7 +187,7 @@ python eval9.py --eval_dir $eval_dir
 
 
 # Phase 2 gold
-version=v40.6-confirm && \
+version=v33.7 && \
 eval_dir=$(realpath evals/$version) && \
 mkdir -p $eval_dir && \
 python eval10.py --eval_dir $eval_dir --skip_phase_1 --num_workers 8

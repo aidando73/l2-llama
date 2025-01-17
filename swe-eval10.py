@@ -13,6 +13,7 @@ swebench = load_dataset('princeton-nlp/SWE-bench_Lite', split='test')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SANDBOX_DIR = os.path.join(SCRIPT_DIR, "sandbox")
+STORAGE_DIR = os.environ.get("STORAGE_DIR", os.path.expanduser("~"))
 
 def main():
     df = swebench.to_pandas()
@@ -53,7 +54,7 @@ def main():
     os.makedirs(os.path.join(eval_dir, "trajs"), exist_ok=True)
 
     # Get line count of llama-stack.log
-    log_path = os.path.expanduser("~/dev/llama-stack/llama-stack.log")
+    log_path = os.path.join(STORAGE_DIR, "llama-stack/llama-stack.log")
     with open(log_path) as f:
         line_count = sum(1 for line in f)
 

@@ -15,6 +15,7 @@ import threading
 import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+STORAGE_DIR = os.environ.get("STORAGE_DIR", os.path.expanduser("~"))
 
 
 def main():
@@ -62,7 +63,7 @@ def main():
             df = df[~df["instance_id"].isin(ran_instances)]
 
     # Get line count of llama-stack.log
-    llama_stack_log_path = os.path.expanduser("~/dev/llama-stack/llama-stack.log")
+    llama_stack_log_path = os.path.join(STORAGE_DIR, "llama-stack/llama-stack.log")
     with open(llama_stack_log_path) as f:
         llama_stack_line_count = sum(1 for line in f)
 
