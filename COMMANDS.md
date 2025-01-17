@@ -200,7 +200,7 @@ eval_dir=$(realpath swe-evals)/v33.7 \
     && mkdir -p $eval_dir \
     && python -u swe-eval10.py --eval_dir $eval_dir
 
-eval_dir=$(realpath fine-tune)/v33 \
+eval_dir=$(realpath fine-tune)/v33-dev \
     && mkdir -p $eval_dir \
     && python -u swe-train-eval10.py --eval_dir $eval_dir --num_workers 8
 
