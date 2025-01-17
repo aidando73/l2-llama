@@ -44,8 +44,7 @@ def main():
     os.makedirs(os.path.join(eval_dir, "trajs"), exist_ok=True)
 
     df = swebench.to_pandas()
-    df = df.sample(n=500, random_state=42)
-    df.to_csv(f"{eval_dir}/swe-train-500.parquet", index=False)
+    df.to_json(f"{eval_dir}/swe-train.jsonl", lines=True, orient="records")
 
     # Check if all_preds.jsonl already exists
     already_processed = set()
