@@ -228,6 +228,8 @@ python -m swebench.harness.run_evaluation \
     --dataset_name princeton-nlp/SWE-bench \
     --split dev \
     --run_id $version
+
+pip install -e git+https://github.com/meta-llama/llama-stack-client.git#egg=llama-stack-client
 ```
 
 Dependencies:
