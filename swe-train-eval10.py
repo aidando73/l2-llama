@@ -10,7 +10,8 @@ import multiprocessing as mp
 from argparse import ArgumentParser
 import re
 
-swebench = load_dataset('princeton-nlp/SWE-bench', split='train')
+# swebench = load_dataset('princeton-nlp/SWE-bench', split='train')
+swebench = load_dataset('princeton-nlp/SWE-bench', split='dev')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SANDBOX_DIR = os.path.join(SCRIPT_DIR, "sandbox")
