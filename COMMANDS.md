@@ -231,9 +231,9 @@ python -m swebench.harness.run_evaluation \
 
 pip install -e git+https://github.com/meta-llama/llama-stack-client.git#egg=llama-stack-client
 
-version=v33.7-4b-quant && \
+version=v33.7-4b-quant_2 && \
 mkdir -p $(realpath .)/evals/$version && \
-python eval10.py --eval_dir $(realpath .)/evals/$version
+python eval10.py --eval_dir $(realpath .)/evals/$version --num_workers 1 --skip_phase_1
 ```
 
 Dependencies:
