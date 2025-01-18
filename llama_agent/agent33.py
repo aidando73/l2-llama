@@ -4,6 +4,7 @@ import re
 import json
 from llama_stack_client import LlamaStackClient
 from llama_stack_client.types.shared_params.sampling_params import SamplingParams
+from llama_stack_client.types.shared_params.sampling_params import StrategyGreedySamplingStrategy
 from llama_models.llama3.api.chat_format import ChatFormat
 from llama_models.llama3.api.tokenizer import Tokenizer
 from llama_models.llama3.api.datatypes import StopReason
@@ -39,7 +40,7 @@ PHASE1_ITERATIONS = 10
 PHASE2_ITERATIONS = 10
 
 sampling_params = SamplingParams(
-    strategy="greedy",
+    strategy=StrategyGreedySamplingStrategy(),
     max_tokens=MAX_OUTPUT_TOKENS,
 )
 
