@@ -30,7 +30,8 @@ import textwrap
 import difflib
 
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
-MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
+# MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
+MODEL_ID = "unsloth/Llama-3.3-70B-Instruct-bnb-4bit"
 
 # 512 is the default for fireworks on Llama-stack
 # 4096 seems to be the max - https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct/discussions/6
@@ -40,7 +41,7 @@ PHASE1_ITERATIONS = 10
 PHASE2_ITERATIONS = 10
 
 sampling_params = SamplingParams(
-    strategy=StrategyGreedySamplingStrategy(),
+    strategy={"type": "greedy"},
     max_tokens=MAX_OUTPUT_TOKENS,
 )
 
