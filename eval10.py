@@ -15,7 +15,7 @@ import threading
 import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-STORAGE_DIR = os.environ.get("STORAGE_DIR", os.path.expanduser("~"))
+STORAGE_DIR = os.environ.get("STORAGE_DIR", os.path.expanduser("~/dev/"))
 
 
 def main():
