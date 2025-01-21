@@ -32,8 +32,8 @@ import difflib
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
 # MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 # MODEL_ID = "unsloth/Llama-3.3-70B-Instruct-bnb-4bit"
-# MODEL_ID = "/root/dev/hello-fine-tune/llama-3.3-70b-instruct-code-agent-fine-tune-v1-base-4b-quantized"
-MODEL_ID = "aidando73/llama-3.3-70b-instruct-code-agent-fine-tune-v1-base-4b-quantized"
+# MODEL_ID = "aidando73/llama-3.3-70b-instruct-code-agent-fine-tune-v1-base-4b-quantized"
+MODEL_ID = "aidando73/llama-3.3-70b-instruct-code-agent-fine-tune-v1-merged"
 
 # 512 is the default for fireworks on Llama-stack
 # 4096 seems to be the max - https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct/discussions/6
