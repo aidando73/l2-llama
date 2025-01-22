@@ -122,7 +122,10 @@ def worker_process(args):
 
     print(f"Worker {worker_id} started")
     setup_sandbox(worker_id)
-    client = LlamaStackClient(base_url="http://localhost:5000")
+    client = LlamaStackClient(
+        base_url="http://localhost:5000",
+        timeout=1000000,
+    )
 
     sandbox_dir = os.path.join(SCRIPT_DIR, "sandbox", f"worker_{worker_id}")
 
