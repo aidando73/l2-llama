@@ -1,5 +1,7 @@
 import os
 from typing import Literal, Optional, Tuple, Union
+import re
+import json
 from llama_stack_client import LlamaStackClient
 from llama_models.llama3.api.chat_format import ChatFormat
 from llama_models.llama3.api.tokenizer import Tokenizer
@@ -12,21 +14,29 @@ from llama_models.llama3.api.datatypes import (
     ToolDefinition,
     ToolParamDefinition,
 )
-import re
+from llama_models.llama3.prompt_templates.system_prompts import (
+    FunctionTagCustomToolGenerator,
+    PromptTemplateGeneratorBase,
+    PromptTemplate,
+)
 from llama_agent.utils.file_tree import list_files_in_repo
 from llama_agent import REPO_DIR
 from llama_agent.utils.ansi import red, yellow, magenta, blue
 from subprocess import run
+from textwrap import dedent
+import textwrap
 
 # Currently only supports 3.3-70B-Instruct at the moment since it depends on the 3.3/3.2 tool prompt format
-MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
+# MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
+MODEL_ID = "meta-llama/Llama-3.1-405B-Instruct-FP8"
 ITERATIONS = 15
 
 SANDBOX_DIR = os.path.join(REPO_DIR, "sandbox")
 # We give the agent a virtual working directory so it doesn't have to worry about long absolute paths
 AGENT_WORKING_DIR = "/workspace/"
 
-formatter = ChatFormat(Tokenizer.get_instance())
+tokenizer = Tokenizer.get_instance()
+formatter = ChatFormat(tokenizer)
 
 
 def run_agent(
@@ -46,81 +56,8 @@ def run_agent(
     # System prompt
     message = "<|begin_of_text|>"
     message += header("system")
-    message += """
-    You are an expert software engineer.
-    You will be given a problem statement in <problem_statement>
-
-    Based on the <problem_statement>, you will need to make one or more function/tool calls to achieve the purpose.
-    If none of the function can be used, point it out. If the given question lacks the parameters required by the function,
-    also point it out. You should only return the function call in tools call sections.
-
-    If you decide to invoke any of the function(s), you MUST put it in the format of <tool>[func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]</tool>
-    If you decide to invoke multiple functions, you MUST put commas between the function calls. E.g., <tool>[func_name1(params), func_name2(params), func_name3(params)]</tool>
-
-    Here is a list of functions in JSON format that you can invoke.
-
-    [
-        {
-            "name": "list_files",
-            "description": "List all files in a directory.",
-            "parameters": {
-                "type": "dict",
-                "required": ["path"],
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Absolute path to a directory, e.g. `/workspace/django`. If referencing a file, will return the name of the file."
-                    }
-                },
-            }
-        },
-        {
-            "name": "edit_file",
-            "description": "Edit a file. Specify the path to the file and the new_str to write to it. If old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
-            "parameters": {
-                "type": "dict",
-                "required": ["path", "new_str"],
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Absolute path to file or directory, e.g. `/workspace/django/file.py` or `/workspace/django`."
-                    },
-                    "old_str": {
-                        "type": "string",
-                        "description": "The string in the file at `path` to replace. If not specified, the entire file will be replaced by new_str"
-                    },
-                    "new_str": {
-                        "type": "string",
-                        "description": "The new string to write to the file. If the old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str."
-                    }
-                }
-            }
-        },
-        {
-            "name": "view_file",
-            "description": "View a file",
-            "parameters": {
-                "type": "dict",
-                "required": ["path"],
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The absolute path to the file to view, e.g. `/workspace/django/file.py` or `/workspace/django`."
-                    }
-                }
-            }
-        },
-        {
-            "name": "finish",
-            "description": "If you have solved the problem, you can call this function to finish the task.",
-            "parameters": {}
-        }
-    ]
-
-    Please explain your reasoning before you make any edits in a <thinking> tag.
-
-    <|eot_id|>
-    """.strip()
+    message += L2SystemPromptGenerator().gen(TOOLS).render()
+    message += "<|eot_id|>"
 
     # User prompt
     message += header("user")
@@ -129,7 +66,7 @@ def run_agent(
     )
     message += f"""
     <working_directory>
-    {os.path.join(SANDBOX_DIR, repo)}
+    {os.path.join(AGENT_WORKING_DIR, repo)}
     </working_directory>
 
     <file_tree>
@@ -155,6 +92,7 @@ def run_agent(
             break
 
         message += header("assistant")
+        token_count = len(tokenizer.encode(message, bos=False, eos=False))
         response = client.inference.completion(
             model_id=MODEL_ID,
             content=message,
@@ -169,7 +107,7 @@ def run_agent(
         else:
             # Check for any text outside of tool tags
             non_tool_content = re.sub(
-                r"<tool>.*?</tool>", "", response.content, flags=re.DOTALL
+                r"<function=.*?>.*?</function>", "", response.content, flags=re.DOTALL
             ).strip()
             if non_tool_content:
                 print(f"Thinking: {magenta(non_tool_content)}")
@@ -213,6 +151,7 @@ def run_agent(
 
             if result == "success" and tool_name == "finish":
                 finished = True
+        print(f"Input tokens: {token_count}")
 
     if finished:
         print(blue("Agent marked as finished"))
@@ -225,60 +164,97 @@ def run_agent(
         ) as f:
             f.write(message)
 
+class L2SystemPromptGenerator(PromptTemplateGeneratorBase):
+    def gen(self, custom_tools: list[ToolDefinition]) -> str:
+        template_str = textwrap.dedent(
+            """
+            You are an expert software engineer.
+            You will be given a problem statement in <problem_statement>
+
+            Based on the <problem_statement>, you will need to make one or more function/tool calls to achieve the purpose.
+            You have access to the following functions:
+
+            {% for t in custom_tools %}
+            {#- manually setting up JSON because jinja sorts keys in unexpected ways -#}
+            {%- set tname = t.tool_name -%}
+            {%- set tdesc = t.description -%}
+            {%- set modified_params = t.parameters.copy() -%}
+            {%- for key, value in modified_params.items() -%}
+                {%- if 'default' in value -%}
+                    {%- set _ = value.pop('default', None) -%}
+                {%- endif -%}
+            {%- endfor -%}
+            {%- set tparams = modified_params | tojson -%}
+            Use the function '{{ tname }}' to '{{ tdesc }}':
+            {"name": "{{tname}}", "description": "{{tdesc}}", "parameters": {{tparams}}}
+
+            {% endfor -%}
+            If you choose to call a function ONLY reply in the following format:
+
+            <function=example_function_name>{"example_name": "example_value"}</function>
+
+            Please explain your reasoning before you perform any tool calls in a <thinking> tag.
+
+            Reminder:
+            - Function calls MUST follow the specified format, start with <function= and end with </function>
+            - Required parameters MUST be specified
+            - Put the entire function call reply on one line
+            """
+        )
+        return PromptTemplate(
+            template_str.lstrip("\n"),
+            {"custom_tools": [t.model_dump() for t in custom_tools]},
+        )
+
 
 TOOLS = [
     ToolDefinition(
-        name="list_files",
+        tool_name="list_files",
         description="List all files in a directory.",
-        params=[
-            ToolParamDefinition(
-                name="path",
-                type="string",
+        parameters={
+            "path": ToolParamDefinition(
+                param_type="string",
                 description="Absolute path to a directory, e.g. `/workspace/django`. If referencing a file, will return the name of the file.",
                 required=True,
             )
-        ],
+        },
     ),
     ToolDefinition(
-        name="edit_file",
+        tool_name="edit_file",
         description="Edit a file. Specify the path to the file and the new_str to write to it. If old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
-        params=[
-            ToolParamDefinition(
-                name="path",
-                type="string",
+        parameters={
+            "path": ToolParamDefinition(
+                param_type="string",
                 description="Absolute path to file or directory, e.g. `/workspace/django/file.py` or `/workspace/django`.",
                 required=True,
             ),
-            ToolParamDefinition(
-                name="new_str",
-                type="string",
+            "new_str": ToolParamDefinition(
+                param_type="string",
                 description="The new string to write to the file. If the old_str is specified, only the old_str will be replaced with new_str, otherwise the entire file will be replaced by new_str.",
                 required=True,
             ),
-            ToolParamDefinition(
-                name="old_str",
-                type="string",
+            "old_str": ToolParamDefinition(
+                param_type="string",
                 description="The string in the file at `path` to replace. If not specified, the entire file will be replaced by new_str",
                 required=False,
             ),
-        ],
+        },
     ),
     ToolDefinition(
-        name="view_file",
+        tool_name="view_file",
         description="View a file",
-        params=[
-            ToolParamDefinition(
-                name="path",
-                type="string",
+        parameters={
+            "path": ToolParamDefinition(
+                param_type="string",
                 description="The absolute path to the file to view, e.g. `/workspace/django/file.py` or `/workspace/django`.",
                 required=True,
             )
-        ],
+        },
     ),
     ToolDefinition(
-        name="finish",
+        tool_name="finish",
         description="If you have solved the problem, you can call this function to finish the task.",
-        params=[],
+        parameters={},
     ),
 ]
 
@@ -384,43 +360,16 @@ def parse_tool_calls(
                 - error_message (str): The error message
     """
     tool_calls = []
-    for match in re.finditer(r"<tool>(.*?)</tool>", content, re.DOTALL):
-        tool_content = match.group(1)
-        if not is_valid_python_list(tool_content):
-            tool_content = tool_content.strip()
-
-            # Add square brackets if missing
-            if not tool_content.startswith("["):
-                tool_content = f"[{tool_content}"
-            if not tool_content.endswith("]"):
-                tool_content = f"{tool_content}]"
-
+    for match in re.finditer(CUSTOM_TOOL_CALL_PATTERN, content):
+        tool_name = match.group("function_name")
+        query = match.group("args")
         try:
-            result = parse_python_list_for_function_calls(tool_content)
-            if is_valid_python_list(tool_content):
-                # Add the original tool content to each result tuple
-                result = [(name, params) for name, params in result]
-                tool_calls.extend(result)
-            else:
-                tool_calls.append(
-                    (
-                        "error",
-                        "Tool call invalid syntax: " + match.group(0),
-                    )
-                )
+            tool_calls.append((tool_name, json.loads(query.replace("'", '"'))))
         except Exception as e:
-            tool_calls.append(
-                (
-                    "error",
-                    "Tool call invalid syntax: Could not parse tool call: "
-                    + match.group(0)
-                    + " "
-                    + str(e),
-                )
-            )
-
+            tool_calls.append(("error", f"Tool call invalid syntax: {query} {e}"))
     return tool_calls
 
+CUSTOM_TOOL_CALL_PATTERN = r"<function=(?P<function_name>[^}]+)>(?P<args>{.*?})"
 
 def display_tool_params(tool_params: dict[str, str]):
     return (

@@ -3,3 +3,16 @@ env/
 sandbox/
 __pycache__/
 .pytest_cache/
+evals/
+current_instance.txt
+sample_row.json
+current_instance.patch
+logs/
+prompt.txt
+edit_file-prompt.txt
+swe-evals/
+worker_0.log
+.DS_Store
+.aider*
+.envrc
+fine-tune/
